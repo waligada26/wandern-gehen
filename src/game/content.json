@@ -31,6 +31,7 @@
       "biome": "forest",
       "prompt": "The trees open up. Below, the whole valley is holding still in the light.",
       "landmark": "signpost",
+      "linger": { "ms": 3500 },
       "effects": { "morale": 1 },
       "next": "stream_crossing_01"
     },
@@ -44,14 +45,97 @@
         {
           "label": "Stop and refill the canteen",
           "effects": { "water": 2 },
-          "next": "sunset_pause_01"
+          "next": "encounter_hiker_01"
         },
         {
           "label": "Hop across and press on",
           "effects": { "energy": -1 },
+          "next": "encounter_hiker_01"
+        }
+      ]
+    },
+    "encounter_hiker_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "Another walker comes the other way, pack worn soft with miles.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Say hello",
+          "effects": { "morale": 1 },
+          "next": "sunset_pause_01"
+        },
+        {
+          "label": "Nod and pass",
+          "effects": {},
           "next": "sunset_pause_01"
         }
       ]
+    },
+    "pond_stones_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The path edges a still pond, flat as glass.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Skip a stone",
+          "effects": { "morale": 1 },
+          "next": "pond_stones_beat_01"
+        },
+        {
+          "label": "Keep going",
+          "effects": {},
+          "next": "marker_read_01"
+        }
+      ]
+    },
+    "pond_stones_beat_01": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The stone skips once, twice — rings spreading out across the quiet.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "next": "marker_read_01"
+    },
+    "gate_01": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A wooden gate crosses the path, latched against the wind.",
+      "landmark": "signpost",
+      "next": "trail_end_01"
+    },
+    "marker_read_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A weathered marker leans at the junction, letters half-worn.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Read it",
+          "effects": {},
+          "next": "marker_read_beat_01"
+        },
+        {
+          "label": "Walk past",
+          "effects": {},
+          "next": "log_rest_01"
+        }
+      ]
+    },
+    "marker_read_beat_01": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "'Old Miller's Track — 2 miles.' Someone carved a small bird beneath it.",
+      "landmark": null,
+      "linger": { "ms": 3500 },
+      "next": "log_rest_01"
     },
     "sunset_pause_01": {
       "type": "choice",
@@ -63,12 +147,12 @@
         {
           "label": "Stop and watch a while",
           "effects": { "morale": 1 },
-          "next": "log_rest_01"
+          "next": "pond_stones_01"
         },
         {
           "label": "Walk on through the gold",
           "effects": {},
-          "next": "log_rest_01"
+          "next": "pond_stones_01"
         }
       ]
     },
@@ -83,12 +167,12 @@
           "label": "Sit, sip, and watch a while",
           "requires": { "water": 1 },
           "effects": { "water": -1, "energy": 1, "morale": 1 },
-          "next": "trail_end_01"
+          "next": "gate_01"
         },
         {
           "label": "Keep a good rhythm going",
           "effects": {},
-          "next": "trail_end_01"
+          "next": "gate_01"
         }
       ]
     },

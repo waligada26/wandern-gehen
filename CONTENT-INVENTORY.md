@@ -33,8 +33,14 @@ options   exactly 2 of:
 **Beat node:** same as choice, minus `options`, plus:
 
 ```
-effects   applied when "Walk on" is tapped (optional)
+effects   applied when "Walk on" is tapped — or, on a linger beat, when the hold begins (optional)
 next      single onward pointer
+linger    OPTIONAL — { "ms": n, "tint": "#rrggbb" }, both sub-fields optional.
+          Presence = a HELD SCENE MOMENT instead of a card: the world eases to
+          a stop (~0.5s), the prompt fades in as a buttonless caption, the
+          optional tint overlays the scene at ~0.25 alpha, it holds `ms`
+          (default 3000), reverses, and auto-advances to `next`. The distance
+          clock (and everything on it) pauses during the hold.
 ```
 
 **Ending node:** `type`, `trigger`, `biome`, `prompt`, `landmark` only. Shows the
@@ -59,11 +65,14 @@ Defined in `src/game/scenes/Game.js` (`STATE_START` / `STATE_MAX`):
   hardcoded moment in `Game.js` (`meetHat`), outside the content graph — as is
   the whole rare-encounter flow (fox, polaroid).
 - **Button labels for non-choices** are fixed in code: "Walk on" (beats),
-  "Begin a new trail" (endings), "Wear it" (hat).
+  "Begin a new trail" (endings), "Wear it" (hat). A tactile beat like the gate
+  can't say "Open the gate" yet.
 - The stop *prompts and options themselves* are fully data-driven — no leftover
   hardcoded choices from Session 3 remain.
+- There is **no hardcoded trail-end or distance cap** — a trail ends only when
+  the graph reaches a `type: "ending"` node.
 
-## The nodes
+## The nodes (in trail order)
 
 ### fork_cairn_01 — choice · distance · forest · landmark: cairn
 
@@ -76,11 +85,11 @@ Defined in `src/game/scenes/Game.js` (`STATE_START` / `STATE_MAX`):
 
 **Diverges:** YES — different effects *and* different next (the only true route branch).
 
-### vista_overlook_01 — beat · distance · forest · landmark: signpost
+### vista_overlook_01 — beat · distance · forest · landmark: signpost · **linger 3500ms**
 
 > "The trees open up. Below, the whole valley is holding still in the light."
 
-Effects: morale +1 · Next: stream_crossing_01
+Effects: morale +1 · Next: stream_crossing_01. High-ridge branch only.
 
 ### stream_crossing_01 — choice · distance · forest · landmark: stream
 
@@ -88,10 +97,21 @@ Effects: morale +1 · Next: stream_crossing_01
 
 | Option | Effects | Next |
 |---|---|---|
-| Stop and refill the canteen | water +2 | sunset_pause_01 |
-| Hop across and press on | energy −1 | sunset_pause_01 |
+| Stop and refill the canteen | water +2 | encounter_hiker_01 |
+| Hop across and press on | energy −1 | encounter_hiker_01 |
 
-**Diverges:** effects only — both options converge on sunset_pause_01.
+**Diverges:** effects only — both options converge on encounter_hiker_01.
+
+### encounter_hiker_01 — choice · distance · forest · landmark: signpost
+
+> "Another walker comes the other way, pack worn soft with miles."
+
+| Option | Effects | Next |
+|---|---|---|
+| Say hello | morale +1 | sunset_pause_01 |
+| Nod and pass | (none) | sunset_pause_01 |
+
+**Diverges:** effects only (one side is a no-op) — a mood/encounter stop.
 
 ### sunset_pause_01 — choice · distance · forest · landmark: signpost
 
@@ -99,11 +119,46 @@ Effects: morale +1 · Next: stream_crossing_01
 
 | Option | Effects | Next |
 |---|---|---|
-| Stop and watch a while | morale +1 | log_rest_01 |
-| Walk on through the gold | (none) | log_rest_01 |
+| Stop and watch a while | morale +1 | pond_stones_01 |
+| Walk on through the gold | (none) | pond_stones_01 |
 
-**Diverges:** effects only (one side is a no-op) — same next. Not flat, but the
-thinnest divergence in the file; fine for a mood-and-pace stop, by design.
+**Diverges:** effects only (one side is a no-op) — fine for a mood-and-pace stop.
+
+### pond_stones_01 — choice · distance · forest · landmark: signpost
+
+> "The path edges a still pond, flat as glass."
+
+| Option | Effects | Next |
+|---|---|---|
+| Skip a stone | morale +1 | pond_stones_beat_01 |
+| Keep going | (none) | marker_read_01 |
+
+**Diverges:** YES — skipping the stone routes through a linger beat; both paths
+rejoin at marker_read_01.
+
+### pond_stones_beat_01 — beat · distance · forest · landmark: null (signpost fallback) · **linger 3000ms**
+
+> "The stone skips once, twice — rings spreading out across the quiet."
+
+No effects · Next: marker_read_01. Only reached via "Skip a stone".
+
+### marker_read_01 — choice · distance · forest · landmark: signpost
+
+> "A weathered marker leans at the junction, letters half-worn."
+
+| Option | Effects | Next |
+|---|---|---|
+| Read it | (none) | marker_read_beat_01 |
+| Walk past | (none) | log_rest_01 |
+
+**Diverges:** next only — the FLATTEST choice in the file effects-wise (both
+no-ops), but the payoff is the discovery beat, not a stat.
+
+### marker_read_beat_01 — beat · distance · forest · landmark: null (signpost fallback) · **linger 3500ms**
+
+> "'Old Miller's Track — 2 miles.' Someone carved a small bird beneath it."
+
+No effects · Next: log_rest_01. Only reached via "Read it".
 
 ### log_rest_01 — choice · distance · forest · landmark: signpost
 
@@ -111,10 +166,17 @@ thinnest divergence in the file; fine for a mood-and-pace stop, by design.
 
 | Option | Effects | Next |
 |---|---|---|
-| Sit, sip, and watch a while | water −1, energy +1, morale +1 · requires water ≥ 1 | trail_end_01 |
-| Keep a good rhythm going | (none) | trail_end_01 |
+| Sit, sip, and watch a while | water −1, energy +1, morale +1 · requires water ≥ 1 | gate_01 |
+| Keep a good rhythm going | (none) | gate_01 |
 
 **Diverges:** effects only — same next. Only node using `requires`.
+
+### gate_01 — beat · distance · forest · landmark: signpost
+
+> "A wooden gate crosses the path, latched against the wind."
+
+No effects · Next: trail_end_01. Normal "Walk on" card — the tactile micro-beat,
+and the last stop before the ending.
 
 ### trail_end_01 — ending · authored · forest · landmark: cairn
 
@@ -124,5 +186,7 @@ No options; resets to a fresh trail. No setpiece (field unsupported).
 
 ## Count
 
-**4 choices · 1 beat · 1 ending · 0 flat choices** — every choice diverges at
-least by effects; only fork_cairn_01 diverges by route.
+**7 choices · 4 beats (3 linger, 1 card) · 1 ending** — every choice diverges by
+effects or by routing into a beat; fork_cairn_01 is still the only biome-scale
+route branch. Longest possible trail: 12 stops (high ridge + both discovery
+beats); shortest: 9 (low path, no detours).

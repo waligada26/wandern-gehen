@@ -56,6 +56,30 @@ const HAT_WINDOW_M = FAST ? 126 : 1260;       // 15 minutes of hiking time
 const FOX_RATE_BARE = 0.00005;                // ~0.01%/roll — a campfire story
 const FOX_RATE_HAT = FAST ? 0.35 : 0.013;     // ≈ 80% chance within one window
 
+//  --- the day/night wash ---
+//  A full-scene colour overlay that drifts with walked distance, so the day
+//  advances only while she walks and pauses at stops and at camp. One full
+//  day per ~10 minutes of walking; ?fast compresses it 10× like everything
+//  else, so a whole day fits inside a test run.
+const DAY_CYCLE_M = FAST ? 84 : 840;          // 840 m ≈ 10 min at WALK_MPS
+
+//  Palette stops around the loop (phase 0..1), lerped piecewise. Dwell is
+//  shaped by doubling stops: long midday and golden hour, a brief night.
+//  Tune colours/alphas here.
+const DAY_PALETTE = [
+    { at: 0.00, color: 0xf7a58c, alpha: 0.15 },   // dawn — soft rose/peach
+    { at: 0.10, color: 0xfff6e8, alpha: 0.05 },   // morning settles
+    { at: 0.45, color: 0xfff6e8, alpha: 0.05 },   // ...long midday dwell
+    { at: 0.58, color: 0xffa54f, alpha: 0.22 },   // golden hour
+    { at: 0.72, color: 0xffa54f, alpha: 0.22 },   // ...golden dwell
+    { at: 0.82, color: 0xa05fa8, alpha: 0.30 },   // dusk — violet/magenta
+    { at: 0.90, color: 0x1e3a6e, alpha: 0.30 },   // night — deep blue, not black
+    { at: 0.96, color: 0x1e3a6e, alpha: 0.30 }    // ...brief deep night, then dawn
+];
+
+//  Silhouettes must stay readable at night — the wash never exceeds this.
+const DAY_WASH_MAX_ALPHA = 0.35;
+
 const UI_FONT = {
     fontFamily: 'Courier New, monospace',
     color: '#f4ede0',
@@ -126,13 +150,27 @@ export class Game extends Scene
         this.hatSprite = this.add.image(WANDA_X + 7, GROUND_Y - 57, 'hat')
             .setOrigin(0.5, 1).setDepth(11).setVisible(false);
 
+        //  The day/night wash: above the world and Wanda (≤11), below the
+        //  HUD (20), cards (100), and a linger tint (90) — so a linger's
+        //  colour composites on top and evening reads warm-over-blue.
+        this.dayWash = this.add.rectangle(180, 320, 360, 640, 0xffffff)
+            .setDepth(15).setAlpha(0);
+
         //  The distance clock. Advances ONLY while walking — so it pauses at
         //  every stop and at the campfire. Everything times off it.
         this.distanceM = this.savedHike ? this.savedHike.distanceM : 0;
         this.walking = true;
+
+        //  Linger beats ease this 1→0→1 instead of hard-stopping. update()
+        //  multiplies every world speed AND the distance step by it, so the
+        //  clock, the hat window, and the rare dice all pause with the
+        //  scenery for free. Card stops still use `walking` as before.
+        this.scrollScale = 1;
+        this.lingering = false;
         this.distanceText = this.add.text(346, 14, '0.0 km', {
             ...UI_FONT, fontSize: 15, color: '#476578'
         }).setOrigin(1, 0).setResolution(3).setDepth(20);
+        this.updateDayWash();   // a restored hike resumes at its saved time of day
 
         //  The hike's state, nudged by choice effects, gating some options.
         this.state = this.savedHike ? { ...this.savedHike.state } : { ...STATE_START };
@@ -228,11 +266,12 @@ export class Game extends Scene
         if (!this.walking) return;   // stopped: world holds its breath
 
         const dt = delta / 1000;
-        const stepM = WALK_MPS * dt;
+        const scale = this.scrollScale;
+        const stepM = WALK_MPS * scale * dt;
 
         for (const layer of this.layers)
         {
-            layer.offset = (layer.offset + layer.speed * dt) % TEX_W;
+            layer.offset = (layer.offset + layer.speed * scale * dt) % TEX_W;
             const x = -Math.round(layer.offset);   // whole pixels only — keeps the grid crisp
             layer.a.x = x;
             layer.b.x = x + TEX_W;
@@ -240,6 +279,7 @@ export class Game extends Scene
 
         this.distanceM += stepM;
         this.distanceText.setText((this.distanceM / 1000).toFixed(1) + ' km');
+        this.updateDayWash();
 
         //  The hat window burns down in walked meters — hiking time, never
         //  wall-clock, so it pauses at stops and at camp.
@@ -273,7 +313,7 @@ export class Game extends Scene
         if (this.landmark)
         {
             //  The landmark rides the path band: same speed, same direction.
-            this.landmark.x -= PATH_SPEED * dt;
+            this.landmark.x -= PATH_SPEED * scale * dt;
 
             if (this.landmarkArmed && this.landmark.x <= WANDA_X + STOP_AHEAD)
             {
@@ -288,7 +328,7 @@ export class Game extends Scene
 
         if (this.special)
         {
-            this.special.sprite.x -= PATH_SPEED * dt;
+            this.special.sprite.x -= PATH_SPEED * scale * dt;
 
             if (!this.special.met && this.special.sprite.x <= WANDA_X + 90)
             {
@@ -311,10 +351,18 @@ export class Game extends Scene
 
     arriveAtStop ()
     {
-        this.pauseWalk();
         this.landmarkArmed = false;   // resolved — when we resume, she walks past it
 
         const node = content.nodes[this.currentId];
+
+        //  A beat with a `linger` object is a held scene moment, not a card.
+        if (node.type === 'beat' && node.linger)
+        {
+            this.startLinger(node);
+            return;
+        }
+
+        this.pauseWalk();
 
         //  The soft chime that ties off an arrival (GAME-DESIGN → Timing).
         if (node.type === 'ending') playArrivalChime();
@@ -408,6 +456,135 @@ export class Game extends Scene
         this.resolveStop({}, content.start);
     }
 
+    //  --- the day/night wash ---
+
+    //  Where we are in the day: walked meters, wrapped around the cycle.
+    updateDayWash ()
+    {
+        const phase = (this.distanceM % DAY_CYCLE_M) / DAY_CYCLE_M;
+        const { color, alpha } = this.dayWashAt(phase);
+        this.dayWash.setFillStyle(color, Math.min(alpha, DAY_WASH_MAX_ALPHA));
+    }
+
+    //  Piecewise-linear colour/alpha between palette stops, wrapping the
+    //  last stop back around to the first (night fading into dawn).
+    dayWashAt (phase)
+    {
+        const n = DAY_PALETTE.length;
+        for (let i = 0; i < n; i++)
+        {
+            const a = DAY_PALETTE[i];
+            const b = DAY_PALETTE[(i + 1) % n];
+            const end = b.at > a.at ? b.at : b.at + 1;       // wrap segment spans 1.0
+            const p = phase >= a.at ? phase : phase + 1;
+            if (p >= a.at && p <= end)
+            {
+                const t = end === a.at ? 0 : (p - a.at) / (end - a.at);
+                return {
+                    color: this.lerpColor(a.color, b.color, t),
+                    alpha: a.alpha + (b.alpha - a.alpha) * t
+                };
+            }
+        }
+        return { color: DAY_PALETTE[0].color, alpha: DAY_PALETTE[0].alpha };
+    }
+
+    lerpColor (a, b, t)
+    {
+        const r = Math.round((a >> 16 & 0xff) + ((b >> 16 & 0xff) - (a >> 16 & 0xff)) * t);
+        const g = Math.round((a >> 8 & 0xff) + ((b >> 8 & 0xff) - (a >> 8 & 0xff)) * t);
+        const bl = Math.round((a & 0xff) + ((b & 0xff) - (a & 0xff)) * t);
+        return (r << 16) | (g << 8) | bl;
+    }
+
+    //  --- linger beats: the scene itself is the card ---
+
+    //  The world eases to a stop, the prompt floats in as a caption (no
+    //  button), an optional tint softens the light, and after the hold it
+    //  all reverses and she walks on to the node's `next` by itself.
+    startLinger (node)
+    {
+        this.lingering = true;
+        playDecisionChime();
+
+        this.lingerCaption = this.add.text(180, 540, node.prompt, {
+            ...UI_FONT, fontSize: 15, wordWrap: { width: 304 }
+        }).setOrigin(0.5).setResolution(3).setDepth(100).setAlpha(0)
+            .setStroke('#2e2a26', 4);
+        this.tweens.add({ targets: this.lingerCaption, alpha: 1, duration: 450, delay: 250 });
+
+        this.lingerTint = null;
+        const tintColor = node.linger.tint
+            ? parseInt(String(node.linger.tint).replace('#', ''), 16)
+            : NaN;
+        if (!Number.isNaN(tintColor))
+        {
+            this.lingerTint = this.add.rectangle(180, 320, 360, 640, tintColor)
+                .setDepth(90).setAlpha(0);
+            this.tweens.add({ targets: this.lingerTint, alpha: 0.25, duration: 600 });
+        }
+
+        //  Ease the world (and with it the distance clock) down to a stop;
+        //  she stops walking the moment the ground does.
+        this.tweens.add({
+            targets: this,
+            scrollScale: 0,
+            duration: 500,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+                this.wanda.stop();
+                this.wanda.setTexture('wanda-stand');
+                setWalking(false);
+                this.applyEffects(node.effects);
+                this.time.delayedCall(node.linger.ms || 3000, () => this.endLinger(node));
+            }
+        });
+    }
+
+    endLinger (node)
+    {
+        //  Fade the moment back out...
+        this.tweens.add({
+            targets: this.lingerCaption,
+            alpha: 0,
+            duration: 400,
+            onComplete: () => {
+                this.lingerCaption.destroy();
+                this.lingerCaption = null;
+            }
+        });
+        if (this.lingerTint)
+        {
+            this.tweens.add({
+                targets: this.lingerTint,
+                alpha: 0,
+                duration: 600,
+                onComplete: () => {
+                    this.lingerTint.destroy();
+                    this.lingerTint = null;
+                }
+            });
+        }
+
+        //  ...and ease the walk back in.
+        this.wanda.setTexture('wanda-walk');
+        this.wanda.play('walk');
+        setWalking(true);
+        this.tweens.add({
+            targets: this,
+            scrollScale: 1,
+            duration: 500,
+            ease: 'Sine.easeIn',
+            onComplete: () => { this.lingering = false; }
+        });
+
+        //  Advance the graph exactly as resolveStop would — effects were
+        //  already applied when the hold began.
+        this.currentId = node.next;
+        this.rollNextLandmark();
+        this.saveNow();
+    }
+
     //  --- rare encounters ---
 
     rollForSpecials ()
@@ -415,7 +592,8 @@ export class Game extends Scene
         //  One live moment on the trail at a time keeps everything readable.
         //  (A landmark already visited and scrolling away doesn't count —
         //  it shouldn't suppress luck.)
-        if (this.special || this.card || (this.landmark && this.landmarkArmed)) return;
+        if (this.special || this.card || this.lingering
+            || (this.landmark && this.landmarkArmed)) return;
 
         if (this.hatRemainingM <= 0 && Math.random() < HAT_RATE)
         {
@@ -579,7 +757,7 @@ export class Game extends Scene
 
     openJournal ()
     {
-        if (this.card || !this.walking) return;   // not over a stop, not twice
+        if (this.card || this.lingering || !this.walking) return;   // not over a stop, not twice
         this.pauseWalk();
         this.cardKind = 'journal';
         this.card = this.buildJournal();
