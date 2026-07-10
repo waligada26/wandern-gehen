@@ -46,7 +46,10 @@ The full design lives in these docs. Consult the relevant one before answering, 
 
 ## Commands
 
-_To be filled in once Session 1 scaffolds the project (dev server, build, deploy)._
+- `npm run dev` — local dev server at http://localhost:8080 (add `-- --host` to test from a phone on the same WiFi)
+- `npm run build` — production build into `dist/`
+- **Deploy:** just `git push` — GitHub Actions builds and publishes to https://waligada26.github.io/wandern-gehen/ automatically
+- Repo: https://github.com/waligada26/wandern-gehen (account **waligada26** — this repo is pinned to it via local git config; don't change global git auth)
 
 ## Keep this file lean
 
