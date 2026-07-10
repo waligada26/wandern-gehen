@@ -20,6 +20,13 @@ the scenery changing (forest → alpine, etc.). Optional extra: a "fork"
 landmark set-piece where the trail visibly splits. Scenery-change is the
 important half.
 
+## Art-pass: per-biome lazy loading (from Session 8's list)
+
+Deferred because placeholder art is painted in code — there's nothing to
+stream yet. When real biome layer PNGs exist, load only the first biome +
+Wanda up front and fetch later biomes during the walk (Phaser's loader can
+run mid-scene). The service worker will cache them after first fetch.
+
 ## Polish, whenever
 
 - HUD value pulse when a stat changes (canteen fills → water number blinks)

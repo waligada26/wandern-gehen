@@ -1,0 +1,16 @@
+{
+  "name": "Wandern Gehen",
+  "short_name": "Wandern",
+  "description": "An ambient pixel-art hiking game — the calm opposite of doom-scrolling.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#232c44",
+  "theme_color": "#aacfe4",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
