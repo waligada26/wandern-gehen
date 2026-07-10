@@ -121,13 +121,18 @@ function build ()
         leftFoot = !leftFoot;
     }, 0.4);
 
-    //  Debug/test handle, like window.__wg on the scene.
+    //  Debug/test handle, like window.__wg on the scene. The meter reads
+    //  the actual signal heading to the speakers — state can lie, level
+    //  can't.
+    const meter = new Tone.Meter({ smoothing: 0.9 });
+    master.connect(meter);
     window.__wgAudio = {
         get context () { return Tone.getContext().state; },
         get transport () { return Tone.getTransport().state; },
         get steps () { return stepLoop.state; },
         get shimmer () { return shimmerGain.gain.value; },
-        get muted () { return muted; }
+        get muted () { return muted; },
+        get level () { return meter.getValue(); }
     };
 }
 
@@ -137,6 +142,15 @@ export async function unlockAudio ()
 {
     if (unlocked) return;
     unlocked = true;
+
+    //  iOS: without this, the silent/ring switch mutes all web audio.
+    //  Declaring the session as "playback" ranks us with music apps.
+    try
+    {
+        if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    }
+    catch (e) { /* older iOS / other browsers: not available, fine */ }
+
     build();
     await Tone.start();
     const t = Tone.getTransport();
