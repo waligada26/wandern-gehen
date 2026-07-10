@@ -83,7 +83,7 @@
           "label": "Sit, sip, and watch a while",
           "requires": { "water": 1 },
           "effects": { "water": -1, "energy": 1, "morale": 1 },
-          "next": "trail_end_01"
+          "next": "log_rest_sit_01"
         },
         {
           "label": "Keep a good rhythm going",
@@ -91,6 +91,13 @@
           "next": "trail_end_01"
         }
       ]
+    },
+    "log_rest_sit_01": {
+      "type": "beat",
+      "biome": "forest",
+      "landmark": null,
+      "prompt": "She sits. The mossy log gives a little. The light goes soft and birdsong drifts up — then she stands, and the trail goes on.",
+      "next": "trail_end_01"
     },
     "trail_end_01": {
       "type": "ending",
