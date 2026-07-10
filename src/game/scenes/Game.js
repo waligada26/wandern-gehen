@@ -16,7 +16,6 @@ const LAYERS = [
 const TEX_W = 360;
 
 const GROUND_Y = 478;   // where Wanda's feet sit on the path band
-const STEP_MS = 160;    // walking bob rhythm (placeholder for a real walk cycle)
 
 export class Game extends Scene
 {
@@ -27,7 +26,13 @@ export class Game extends Scene
 
     preload ()
     {
-        this.load.image('wanda', 'assets/wanda-stand-east.png');
+        //  Standing pose (map in hand) — used when she pauses at landmarks.
+        this.load.image('wanda-stand', 'assets/wanda-stand-east.png');
+        //  8-frame walk cycle, one 64×64 frame per step position.
+        this.load.spritesheet('wanda-walk', 'assets/wanda-walk-east.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
     }
 
     create ()
@@ -50,19 +55,14 @@ export class Game extends Scene
         }));
 
         //  Wanda, feet planted on the path (origin bottom-center).
-        this.wanda = this.add.image(110, GROUND_Y, 'wanda').setOrigin(0.5, 1);
-
-        //  Placeholder walk: a 2-pixel bob on a steady rhythm. Reads as
-        //  footsteps until the real walk-cycle sprite sheet replaces it.
-        this.stepUp = false;
-        this.time.addEvent({
-            delay: STEP_MS,
-            loop: true,
-            callback: () => {
-                this.stepUp = !this.stepUp;
-                this.wanda.y = GROUND_Y - (this.stepUp ? 2 : 0);
-            }
+        this.anims.create({
+            key: 'walk',
+            frames: this.anims.generateFrameNumbers('wanda-walk', { start: 0, end: 7 }),
+            frameRate: 10,
+            repeat: -1
         });
+        this.wanda = this.add.sprite(110, GROUND_Y, 'wanda-walk').setOrigin(0.5, 1);
+        this.wanda.play('walk');
     }
 
     update (time, delta)
