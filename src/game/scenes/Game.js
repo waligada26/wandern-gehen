@@ -1,6 +1,7 @@
-import { Scene } from 'phaser';
+import { Scene, TintModes } from 'phaser';
 import content from '../content.json';
 import { writeSave } from '../save';
+import { savePhoto, latestPhoto, sharePhoto } from '../photos';
 
 //  The world is 4 horizontal bands (back to front), each scrolling
 //  right-to-left at its own speed — slower = further away (parallax).
@@ -37,8 +38,19 @@ const STOP_AHEAD = 56;
 const STATE_START = { water: 3, energy: 3, morale: 3 };
 const STATE_MAX = 5;
 
-//  ?fast in the URL shrinks gaps 10× — for testing, never the real pace.
+//  ?fast in the URL shrinks gaps and boosts rare odds 10-100× — for
+//  testing, never the real pace.
 const FAST = new URLSearchParams(window.location.search).has('fast');
+
+//  --- rare encounters (GAME-DESIGN.md → rare encounters) ---
+//  The dice roll once per walked interval, so odds live on the distance
+//  clock like everything else. Rarity sits on the HAT, not the creature:
+//  the fox's bare rate is mythical; a worn hat opens a ~4-in-5 window.
+const ROLL_EVERY_M = 10;
+const HAT_RATE = FAST ? 0.4 : 0.0026;         // ≈ one hat per 45 hiking minutes
+const HAT_WINDOW_M = FAST ? 126 : 1260;       // 15 minutes of hiking time
+const FOX_RATE_BARE = 0.00005;                // ~0.01%/roll — a campfire story
+const FOX_RATE_HAT = FAST ? 0.35 : 0.013;     // ≈ 80% chance within one window
 
 const UI_FONT = {
     fontFamily: 'Courier New, monospace',
@@ -81,6 +93,10 @@ export class Game extends Scene
         this.paintSignpost();
         this.paintCairn();
         this.paintStream();
+        this.paintHat();
+        this.paintFox();
+        this.paintDeer();
+        this.paintYeti();
 
         //  Each band is two copies of its texture side by side. Both slide
         //  left; when the pair has moved one full tile, it snaps back — the
@@ -102,6 +118,10 @@ export class Game extends Scene
         this.wanda = this.add.sprite(WANDA_X, GROUND_Y, 'wanda-walk').setOrigin(0.5, 1).setDepth(10);
         this.wanda.play('walk');
 
+        //  The lucky hat rides just above her head when worn.
+        this.hatSprite = this.add.image(WANDA_X + 7, GROUND_Y - 57, 'hat')
+            .setOrigin(0.5, 1).setDepth(11).setVisible(false);
+
         //  The distance clock. Advances ONLY while walking — so it pauses at
         //  every stop and at the campfire. Everything times off it.
         this.distanceM = this.savedHike ? this.savedHike.distanceM : 0;
@@ -112,6 +132,15 @@ export class Game extends Scene
 
         //  The hike's state, nudged by choice effects, gating some options.
         this.state = this.savedHike ? { ...this.savedHike.state } : { ...STATE_START };
+
+        //  Rare-encounter state: the journal (first sightings), the hat
+        //  window (in walked meters), and the roll odometer.
+        this.journal = this.savedHike ? (this.savedHike.journal || {}) : {};
+        this.hatRemainingM = this.savedHike ? (this.savedHike.hatRemainingM || 0) : 0;
+        this.hatSprite.setVisible(this.hatRemainingM > 0);
+        this.lastRollM = this.distanceM;
+        this.special = null;         // hat pickup or creature currently on screen
+
         this.stateText = this.add.text(14, 14, '', {
             ...UI_FONT, fontSize: 13, color: '#476578', align: 'left'
         }).setOrigin(0, 0).setResolution(3).setDepth(20);
@@ -126,6 +155,7 @@ export class Game extends Scene
         this.landmark = null;        // the prop currently on (or entering) screen
         this.landmarkArmed = false;  // true = it's a live stop; false = already visited
         this.card = null;
+        this.cardKind = null;
         if (this.savedHike)
         {
             this.nextLandmarkAtM = this.savedHike.nextLandmarkAtM;
@@ -134,6 +164,14 @@ export class Game extends Scene
         {
             this.rollNextLandmark();
         }
+
+        //  The field journal's little tab, bottom-left thumb reach.
+        const journalTab = this.add.rectangle(56, 614, 88, 30, 0x2e2a26, 0.85)
+            .setDepth(20).setInteractive({ useHandCursor: true });
+        this.add.text(56, 614, 'journal', {
+            ...UI_FONT, fontSize: 12, color: '#d9b380'
+        }).setOrigin(0.5).setResolution(3).setDepth(21);
+        journalTab.on('pointerdown', () => this.openJournal());
 
         //  Saving: after every resolved stop, on a slow autosave tick while
         //  walking, and when the tab is hidden (phone locked, app switched —
@@ -147,6 +185,8 @@ export class Game extends Scene
             document.removeEventListener('visibilitychange', this.onVisibilityChange));
 
         this.saveNow();
+
+        window.__wg = this;   // debug/test handle; harmless in production
     }
 
     saveNow ()
@@ -155,15 +195,18 @@ export class Game extends Scene
             distanceM: this.distanceM,
             state: this.state,
             currentId: this.currentId,
-            nextLandmarkAtM: this.nextLandmarkAtM
+            nextLandmarkAtM: this.nextLandmarkAtM,
+            journal: this.journal,
+            hatRemainingM: this.hatRemainingM
         });
     }
 
     update (time, delta)
     {
-        if (!this.walking) return;   // stopped at a landmark: world holds its breath
+        if (!this.walking) return;   // stopped: world holds its breath
 
         const dt = delta / 1000;
+        const stepM = WALK_MPS * dt;
 
         for (const layer of this.layers)
         {
@@ -173,13 +216,29 @@ export class Game extends Scene
             layer.b.x = x + TEX_W;
         }
 
-        this.distanceM += WALK_MPS * dt;
+        this.distanceM += stepM;
         this.distanceText.setText((this.distanceM / 1000).toFixed(1) + ' km');
+
+        //  The hat window burns down in walked meters — hiking time, never
+        //  wall-clock, so it pauses at stops and at camp.
+        if (this.hatRemainingM > 0)
+        {
+            this.hatRemainingM -= stepM;
+            this.refreshStateText();
+            if (this.hatRemainingM <= 0) this.blowHatAway();
+        }
+
+        //  The rare dice: one roll per walked interval.
+        while (this.distanceM - this.lastRollM >= ROLL_EVERY_M)
+        {
+            this.lastRollM += ROLL_EVERY_M;
+            this.rollForSpecials();
+        }
 
         //  Time (in walked distance) for the next stop? Spawn its landmark
         //  off the right edge — it approaches with the world, never pops
-        //  from a timer.
-        if (!this.landmark && this.distanceM >= this.nextLandmarkAtM)
+        //  from a timer. Specials get the trail to themselves first.
+        if (!this.landmark && !this.special && this.distanceM >= this.nextLandmarkAtM)
         {
             const node = content.nodes[this.currentId];
             const texture = this.textures.exists(node.landmark) ? node.landmark : 'signpost';
@@ -204,6 +263,18 @@ export class Game extends Scene
                 this.landmark = null;
             }
         }
+
+        if (this.special)
+        {
+            this.special.sprite.x -= PATH_SPEED * dt;
+
+            if (!this.special.met && this.special.sprite.x <= WANDA_X + 90)
+            {
+                this.special.met = true;
+                if (this.special.type === 'hat') this.meetHat();
+                else this.meetCreature(this.special.creature);
+            }
+        }
     }
 
     //  --- the stop-and-choose loop, driven by the content graph ---
@@ -218,20 +289,46 @@ export class Game extends Scene
 
     arriveAtStop ()
     {
-        this.walking = false;
+        this.pauseWalk();
         this.landmarkArmed = false;   // resolved — when we resume, she walks past it
-
-        //  A stopped hiker mid-stride reads as a glitch; the standing pose
-        //  (checking her map) reads as "paused to think".
-        this.wanda.stop();
-        this.wanda.setTexture('wanda-stand');
 
         const node = content.nodes[this.currentId];
 
         //  A beat of quiet before the card — arrival first, question second.
         this.time.delayedCall(450, () => {
             this.card = node.type === 'ending' ? this.buildEnding(node) : this.buildCard(node);
+            this.cardKind = node.type;
             this.tweens.add({ targets: this.card, alpha: 1, duration: 300 });
+        });
+    }
+
+    //  A stopped hiker mid-stride reads as a glitch; the standing pose
+    //  (checking her map) reads as "paused to think".
+    pauseWalk ()
+    {
+        this.walking = false;
+        this.wanda.stop();
+        this.wanda.setTexture('wanda-stand');
+        this.hatSprite.setPosition(WANDA_X + 7, GROUND_Y - 57);
+    }
+
+    resumeWalk ()
+    {
+        this.wanda.setTexture('wanda-walk');
+        this.wanda.play('walk');
+        this.walking = true;
+    }
+
+    dismissCard ()
+    {
+        const card = this.card;
+        this.card = null;
+        this.cardKind = null;
+        this.tweens.add({
+            targets: card,
+            alpha: 0,
+            duration: 250,
+            onComplete: () => card.destroy()
         });
     }
 
@@ -253,7 +350,13 @@ export class Game extends Scene
     refreshStateText ()
     {
         const { water, energy, morale } = this.state;
-        this.stateText.setText(`water ${water} · energy ${energy} · morale ${morale}`);
+        let line = `water ${water} · energy ${energy} · morale ${morale}`;
+        if (this.hatRemainingM > 0)
+        {
+            const minutes = Math.ceil(this.hatRemainingM / WALK_MPS / 60);
+            line += ` · hat ${minutes}m`;
+        }
+        this.stateText.setText(line);
     }
 
     //  Resolve the current stop: apply effects, advance the graph, walk on.
@@ -261,17 +364,8 @@ export class Game extends Scene
     {
         this.applyEffects(effects);
         this.currentId = nextId;
-
-        this.tweens.add({
-            targets: this.card,
-            alpha: 0,
-            duration: 250,
-            onComplete: () => { this.card.destroy(); this.card = null; }
-        });
-
-        this.wanda.setTexture('wanda-walk');
-        this.wanda.play('walk');
-        this.walking = true;
+        this.dismissCard();
+        this.resumeWalk();
         this.rollNextLandmark();
         this.saveNow();
     }
@@ -280,9 +374,265 @@ export class Game extends Scene
     startNewTrail ()
     {
         this.distanceM = 0;
+        this.lastRollM = 0;
         this.state = { ...STATE_START };
         this.refreshStateText();
         this.resolveStop({}, content.start);
+    }
+
+    //  --- rare encounters ---
+
+    rollForSpecials ()
+    {
+        //  One live moment on the trail at a time keeps everything readable.
+        //  (A landmark already visited and scrolling away doesn't count —
+        //  it shouldn't suppress luck.)
+        if (this.special || this.card || (this.landmark && this.landmarkArmed)) return;
+
+        if (this.hatRemainingM <= 0 && Math.random() < HAT_RATE)
+        {
+            this.spawnSpecial('hat', 'hat');
+            return;
+        }
+
+        const foxRate = this.hatRemainingM > 0 ? FOX_RATE_HAT : FOX_RATE_BARE;
+        if (Math.random() < foxRate)
+        {
+            this.spawnSpecial('creature', 'fox');
+        }
+    }
+
+    spawnSpecial (type, texture)
+    {
+        this.special = {
+            type,
+            creature: type === 'creature' ? texture : null,
+            met: false,
+            sprite: this.add.image(TEX_W + 30, GROUND_Y + 2, texture)
+                .setOrigin(0.5, 1)
+                .setDepth(6)
+        };
+    }
+
+    clearSpecial ()
+    {
+        if (this.special)
+        {
+            this.special.sprite.destroy();
+            this.special = null;
+        }
+    }
+
+    //  A lucky hat, met on the trail. Wearing it opens the window.
+    meetHat ()
+    {
+        this.pauseWalk();
+        this.time.delayedCall(450, () => {
+            this.cardKind = 'beat';
+            this.card = this.buildSimpleCard(
+                'A lucky hat, snagged on a bramble. Somehow it fits perfectly.',
+                'Wear it',
+                () => {
+                    this.hatRemainingM = HAT_WINDOW_M;
+                    this.hatSprite.setVisible(true);
+                    this.refreshStateText();
+                    this.clearSpecial();
+                    this.dismissCard();
+                    this.resumeWalk();
+                    this.saveNow();
+                });
+            this.tweens.add({ targets: this.card, alpha: 1, duration: 300 });
+        });
+    }
+
+    //  The wind takes it back: an animated goodbye, not a silent stat reset.
+    blowHatAway ()
+    {
+        this.hatRemainingM = 0;
+        this.refreshStateText();
+
+        const gone = this.add.image(this.hatSprite.x, this.hatSprite.y, 'hat')
+            .setOrigin(0.5, 1).setDepth(11);
+        this.hatSprite.setVisible(false);
+
+        this.tweens.add({
+            targets: gone,
+            x: -60,
+            y: gone.y - 70,
+            angle: -520,
+            alpha: 0.2,
+            duration: 2400,
+            ease: 'Sine.easeIn',
+            onComplete: () => gone.destroy()
+        });
+        this.saveNow();
+    }
+
+    //  A rare creature on the path. It meets your eyes; the moment is kept
+    //  twice — a journal entry and a photo — before she walks on.
+    meetCreature (creature)
+    {
+        this.pauseWalk();
+
+        //  First sighting fills the journal slot (date + biome).
+        const node = content.nodes[this.currentId];
+        const biome = (node && node.biome) || 'forest';
+        const now = new Date();
+        const dateNice = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+        if (!this.journal[creature])
+        {
+            this.journal[creature] = { date: dateNice, iso: now.toISOString(), biome };
+        }
+        this.saveNow();
+
+        //  Let the moment sit for a breath, then snap the canvas exactly as
+        //  it looks — fox, hiker, light — and make the Polaroid.
+        this.time.delayedCall(700, () => {
+            this.capturePhoto(creature, biome, dateNice, photo => {
+                this.card = this.buildPolaroid(photo, () => {
+                    //  the fox scurries off as she walks on
+                    const s = this.special.sprite;
+                    this.special = null;
+                    this.tweens.add({
+                        targets: s, x: -50, duration: 900, ease: 'Sine.easeIn',
+                        onComplete: () => s.destroy()
+                    });
+                    this.dismissCard();
+                    this.resumeWalk();
+                    this.saveNow();
+                });
+                this.cardKind = 'polaroid';
+                this.tweens.add({ targets: this.card, alpha: 1, duration: 300 });
+            });
+        });
+    }
+
+    //  Snapshot the live canvas, crop to the scene band around the moment,
+    //  and store it in IndexedDB as a captioned keepsake.
+    capturePhoto (creature, biome, dateNice, onReady)
+    {
+        const name = content.creatures[creature] ? content.creatures[creature].name : creature;
+        const caption = `${name} — spotted ${dateNice} · ${biome}`;
+        const finish = dataUrl => {
+            const photo = {
+                id: `${creature}-${Date.now()}`,
+                creature, caption, biome,
+                dateIso: new Date().toISOString(),
+                dataUrl
+            };
+            savePhoto(photo).catch(() => {});
+            const key = 'photo-' + photo.id;
+            this.textures.once('addtexture-' + key, () => onReady({ ...photo, textureKey: key }));
+            this.textures.addBase64(key, dataUrl);
+        };
+
+        const crop = image => {
+            const c = document.createElement('canvas');
+            c.width = 320; c.height = 150;
+            //  the band of world around Wanda and the visitor
+            c.getContext('2d').drawImage(image, 0, 390, 360, 170, 0, 0, 320, 150);
+            finish(c.toDataURL('image/png'));
+        };
+
+        if (this.game.renderer.snapshot)
+        {
+            this.game.renderer.snapshot(image => crop(image));
+        }
+        else
+        {
+            crop(this.game.canvas);
+        }
+    }
+
+    //  --- the field journal ---
+
+    openJournal ()
+    {
+        if (this.card || !this.walking) return;   // not over a stop, not twice
+        this.pauseWalk();
+        this.cardKind = 'journal';
+        this.card = this.buildJournal();
+        this.tweens.add({ targets: this.card, alpha: 1, duration: 250 });
+    }
+
+    closeJournal ()
+    {
+        this.dismissCard();
+        this.resumeWalk();
+    }
+
+    buildJournal ()
+    {
+        const children = [
+            this.add.rectangle(180, 320, 360, 640, 0x14181f, 0.75),
+            this.add.rectangle(180, 300, 312, 380, 0x2e2a26, 0.97),
+            this.add.rectangle(180, 300, 312, 380).setStrokeStyle(2, 0xf4ede0, 0.35),
+            this.add.text(180, 128, 'FIELD JOURNAL', {
+                ...UI_FONT, fontSize: 13, color: '#d9b380'
+            }).setOrigin(0.5, 0).setResolution(3)
+        ];
+
+        Object.entries(content.creatures).forEach(([id, meta], i) => {
+            const y = 196 + i * 84;
+            const seen = this.journal[id];
+
+            children.push(this.add.rectangle(78, y, 56, 56, 0x14181f, 0.6));
+            const icon = this.add.image(78, y, id);
+            if (!seen) icon.setTint(0x14181f).setTintMode(TintModes.FILL);   // the ??? silhouette
+            children.push(icon);
+
+            children.push(this.add.text(116, y - 20, seen ? meta.name : '???', {
+                ...UI_FONT, fontSize: 15, align: 'left'
+            }).setOrigin(0, 0).setResolution(3));
+            children.push(this.add.text(116, y + 2, seen
+                ? `spotted ${seen.date} · ${seen.biome}`
+                : 'not yet sighted', {
+                ...UI_FONT, fontSize: 12, color: '#9a938a', align: 'left'
+            }).setOrigin(0, 0).setResolution(3));
+
+            if (seen)
+            {
+                const view = this.add.rectangle(268, y, 72, 30, 0x476578)
+                    .setInteractive({ useHandCursor: true });
+                view.on('pointerdown', () => this.openSavedPhoto(id));
+                children.push(view, this.add.text(268, y, 'photo', {
+                    ...UI_FONT, fontSize: 12
+                }).setOrigin(0.5).setResolution(3));
+            }
+        });
+
+        const close = this.add.rectangle(180, 464, 200, 44, 0x9ab873)
+            .setInteractive({ useHandCursor: true });
+        close.on('pointerdown', () => this.closeJournal());
+        children.push(close, this.add.text(180, 464, 'Back to the trail', {
+            ...UI_FONT, fontSize: 13, color: '#2e2a26'
+        }).setOrigin(0.5).setResolution(3));
+
+        return this.add.container(0, 0, children).setDepth(100).setAlpha(0);
+    }
+
+    //  Re-open a kept photo from the journal.
+    openSavedPhoto (creature)
+    {
+        latestPhoto(creature).catch(() => null).then(photo => {
+            if (!photo) return;
+            const key = 'photo-' + photo.id;
+            const show = () => {
+                this.card.destroy();   // swap journal for the polaroid
+                this.card = this.buildPolaroid({ ...photo, textureKey: key }, () => {
+                    this.dismissCard();
+                    this.resumeWalk();
+                });
+                this.cardKind = 'polaroid';
+                this.card.setAlpha(1);
+            };
+            if (this.textures.exists(key)) show();
+            else
+            {
+                this.textures.once('addtexture-' + key, show);
+                this.textures.addBase64(key, photo.dataUrl);
+            }
+        });
     }
 
     //  --- cards, built from whatever node just arrived ---
@@ -330,6 +680,58 @@ export class Game extends Scene
         }
 
         return this.add.container(0, 0, children).setDepth(100).setAlpha(0);
+    }
+
+    //  One prompt, one button — used for trail moments outside the graph
+    //  (the lucky hat).
+    buildSimpleCard (promptText, buttonLabel, onTap)
+    {
+        const button = this.add.rectangle(180, 585, 240, 62, 0x9ab873)
+            .setInteractive({ useHandCursor: true });
+        button.on('pointerdown', onTap);
+
+        return this.add.container(0, 0, [
+            this.add.rectangle(180, 552, 336, 156, 0x2e2a26, 0.93),
+            this.add.rectangle(180, 552, 336, 156).setStrokeStyle(2, 0xf4ede0, 0.35),
+            this.add.text(180, 494, promptText, {
+                ...UI_FONT, fontSize: 15, wordWrap: { width: 304 }
+            }).setOrigin(0.5, 0).setResolution(3),
+            button,
+            this.add.text(180, 585, buttonLabel, {
+                ...UI_FONT, fontSize: 14, color: '#2e2a26'
+            }).setOrigin(0.5).setResolution(3)
+        ]).setDepth(100).setAlpha(0);
+    }
+
+    //  The keepsake: a little framed print of the moment, with its caption,
+    //  a share button, and the way back to the trail.
+    buildPolaroid (photo, onWalkOn)
+    {
+        const share = this.add.rectangle(97, 585, 150, 62, 0x476578)
+            .setInteractive({ useHandCursor: true });
+        share.on('pointerdown', () => sharePhoto(photo));
+        const walkOn = this.add.rectangle(263, 585, 150, 62, 0x9ab873)
+            .setInteractive({ useHandCursor: true });
+        walkOn.on('pointerdown', onWalkOn);
+
+        return this.add.container(0, 0, [
+            this.add.rectangle(180, 320, 360, 640, 0x14181f, 0.55),
+            this.add.rectangle(180, 268, 268, 232, 0xf4ede0),        // the print
+            this.add.image(180, 244, photo.textureKey).setDisplaySize(240, 112),
+            this.add.text(180, 318, photo.caption, {
+                ...UI_FONT, fontSize: 12, color: '#4a3e36', wordWrap: { width: 230 }
+            }).setOrigin(0.5, 0).setResolution(3),
+            this.add.rectangle(180, 552, 336, 156, 0x2e2a26, 0.93),
+            this.add.rectangle(180, 552, 336, 156).setStrokeStyle(2, 0xf4ede0, 0.35),
+            share,
+            this.add.text(97, 585, 'Share', {
+                ...UI_FONT, fontSize: 14
+            }).setOrigin(0.5).setResolution(3),
+            walkOn,
+            this.add.text(263, 585, 'Walk on', {
+                ...UI_FONT, fontSize: 14, color: '#2e2a26'
+            }).setOrigin(0.5).setResolution(3)
+        ]).setDepth(100).setAlpha(0);
     }
 
     //  An ending: the arrival screen — centered, unhurried, one button.
@@ -402,6 +804,72 @@ export class Game extends Scene
         g.fillStyle(0x5e93ab);
         g.fillRect(0, 12, 44, 2);
         g.generateTexture('stream', 44, 16);
+        g.destroy();
+    }
+
+    //  The lucky hat: straw-gold, wide brim.
+    paintHat ()
+    {
+        const g = this.add.graphics();
+        g.fillStyle(0xd9c078);
+        g.fillRect(0, 7, 16, 3);       // brim
+        g.fillStyle(0xc8a850);
+        g.fillRect(4, 0, 8, 7);        // crown
+        g.fillStyle(0x8a6f3f);
+        g.fillRect(4, 5, 8, 2);        // band
+        g.generateTexture('hat', 16, 10);
+        g.destroy();
+    }
+
+    //  The fox — the first rare creature.
+    paintFox ()
+    {
+        const g = this.add.graphics();
+        g.fillStyle(0xd97f3f);
+        g.fillRect(4, 8, 18, 8);       // body
+        g.fillRect(18, 4, 9, 8);       // head
+        g.fillRect(17, 0, 3, 4);       // ears
+        g.fillRect(23, 0, 3, 4);
+        g.fillRect(0, 6, 5, 6);        // tail
+        g.fillStyle(0xf4ede0);
+        g.fillRect(0, 6, 2, 3);        // tail tip
+        g.fillRect(24, 9, 3, 3);       // muzzle
+        g.fillStyle(0x2e2a26);
+        g.fillRect(6, 16, 3, 4);       // legs
+        g.fillRect(16, 16, 3, 4);
+        g.fillRect(22, 6, 2, 2);       // eye
+        g.generateTexture('fox', 28, 20);
+        g.destroy();
+    }
+
+    //  Journal silhouettes for creatures still out there.
+    paintDeer ()
+    {
+        const g = this.add.graphics();
+        g.fillStyle(0x9a7a54);
+        g.fillRect(4, 12, 20, 10);     // body
+        g.fillRect(20, 4, 7, 10);      // neck+head
+        g.fillRect(18, 0, 2, 5);       // antlers
+        g.fillRect(24, 0, 2, 5);
+        g.fillStyle(0x5c4530);
+        g.fillRect(6, 22, 3, 6);       // legs
+        g.fillRect(19, 22, 3, 6);
+        g.generateTexture('deer', 28, 28);
+        g.destroy();
+    }
+
+    paintYeti ()
+    {
+        const g = this.add.graphics();
+        g.fillStyle(0xe8f2f8);
+        g.fillRect(4, 6, 20, 20);      // shaggy bulk
+        g.fillRect(8, 0, 12, 8);       // head
+        g.fillRect(0, 10, 5, 10);      // arms
+        g.fillRect(23, 10, 5, 10);
+        g.fillStyle(0x476578);
+        g.fillRect(11, 3, 2, 2);       // eyes
+        g.fillRect(15, 3, 2, 2);
+        g.generateTexture('yeti', 28, 28);
         g.destroy();
     }
 

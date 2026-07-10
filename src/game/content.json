@@ -1,5 +1,10 @@
 {
   "start": "fork_cairn_01",
+  "creatures": {
+    "fox": { "name": "Fox" },
+    "deer": { "name": "Deer" },
+    "yeti": { "name": "Yeti" }
+  },
   "nodes": {
     "fork_cairn_01": {
       "type": "choice",
