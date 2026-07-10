@@ -2,6 +2,10 @@ import { Scene, TintModes } from 'phaser';
 import content from '../content.json';
 import { writeSave } from '../save';
 import { savePhoto, latestPhoto, sharePhoto } from '../photos';
+import {
+    unlockAudio, setWalking, setShimmer, isMuted, toggleMuted,
+    playDecisionChime, playArrivalChime, playSightingSting
+} from '../audio';
 
 //  The world is 4 horizontal bands (back to front), each scrolling
 //  right-to-left at its own speed — slower = further away (parallax).
@@ -186,6 +190,24 @@ export class Game extends Scene
 
         this.saveNow();
 
+        //  Sound: browsers need a tap before audio may start. Every tap
+        //  offers one; once running, sync the layers to the game state.
+        this.input.on('pointerdown', () => {
+            unlockAudio().then(() => {
+                setWalking(this.walking);
+                setShimmer(this.hatRemainingM > 0);
+            });
+        });
+
+        //  The mute toggle, bottom-right — remembered between sessions.
+        const soundTab = this.add.rectangle(304, 614, 88, 30, 0x2e2a26, 0.85)
+            .setDepth(20).setInteractive({ useHandCursor: true });
+        this.soundText = this.add.text(304, 614, isMuted() ? 'sound off' : 'sound on', {
+            ...UI_FONT, fontSize: 12, color: '#d9b380'
+        }).setOrigin(0.5).setResolution(3).setDepth(21);
+        soundTab.on('pointerdown', () =>
+            this.soundText.setText(toggleMuted() ? 'sound off' : 'sound on'));
+
         window.__wg = this;   // debug/test handle; harmless in production
     }
 
@@ -294,6 +316,10 @@ export class Game extends Scene
 
         const node = content.nodes[this.currentId];
 
+        //  The soft chime that ties off an arrival (GAME-DESIGN → Timing).
+        if (node.type === 'ending') playArrivalChime();
+        else playDecisionChime();
+
         //  A beat of quiet before the card — arrival first, question second.
         this.time.delayedCall(450, () => {
             this.card = node.type === 'ending' ? this.buildEnding(node) : this.buildCard(node);
@@ -310,6 +336,7 @@ export class Game extends Scene
         this.wanda.stop();
         this.wanda.setTexture('wanda-stand');
         this.hatSprite.setPosition(WANDA_X + 7, GROUND_Y - 57);
+        setWalking(false);
     }
 
     resumeWalk ()
@@ -317,6 +344,7 @@ export class Game extends Scene
         this.wanda.setTexture('wanda-walk');
         this.wanda.play('walk');
         this.walking = true;
+        setWalking(true);
     }
 
     dismissCard ()
@@ -435,6 +463,7 @@ export class Game extends Scene
                 () => {
                     this.hatRemainingM = HAT_WINDOW_M;
                     this.hatSprite.setVisible(true);
+                    setShimmer(true);    // the world audibly brightens
                     this.refreshStateText();
                     this.clearSpecial();
                     this.dismissCard();
@@ -449,6 +478,7 @@ export class Game extends Scene
     blowHatAway ()
     {
         this.hatRemainingM = 0;
+        setShimmer(false);   // the shimmer fades out with the goodbye
         this.refreshStateText();
 
         const gone = this.add.image(this.hatSprite.x, this.hatSprite.y, 'hat')
@@ -473,6 +503,7 @@ export class Game extends Scene
     meetCreature (creature)
     {
         this.pauseWalk();
+        playSightingSting();
 
         //  First sighting fills the journal slot (date + biome).
         const node = content.nodes[this.currentId];

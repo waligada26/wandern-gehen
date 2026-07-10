@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import content from '../content.json';
 import { loadSave } from '../save';
+import { unlockAudio } from '../audio';
 
 //  The campfire is the game's answer to logging out: not a pause screen,
 //  a rest. This scene runs first; with no save it hands straight over to
@@ -107,6 +108,10 @@ export class Camp extends Scene
         this.add.text(180, 560, 'Continue hiking', {
             ...font, fontSize: 14, color: '#2e2a26'
         }).setOrigin(0.5).setResolution(3);
-        button.on('pointerdown', () => this.scene.start('Game', { save }));
+        //  The continue tap doubles as the browser's audio-unlock gesture.
+        button.on('pointerdown', () => {
+            unlockAudio();
+            this.scene.start('Game', { save });
+        });
     }
 }
