@@ -15,7 +15,23 @@ const LAYERS = [
 //  continues perfectly into the left edge when the tile repeats.
 const TEX_W = 360;
 
-const GROUND_Y = 478;   // where Wanda's feet sit on the path band
+const GROUND_Y = 478;       // where feet sit on the path band
+const WANDA_X = 110;
+
+const PATH_SPEED = LAYERS[3].speed;   // world speed at Wanda's feet, px/s
+const WALK_MPS = 1.4;                 // hiking pace ≈ 5 km/h; the distance clock's rate
+
+//  Landmark spacing (GAME-DESIGN.md → Timing): a hard floor so stretches of
+//  pure walking stay a feature, plus the average of two random rolls — which
+//  makes comfortable medium gaps common and extremes rare.
+const GAP_FLOOR_S = 30;
+const GAP_ROLL_S = 60;
+
+//  Where the sign is, relative to Wanda, when she stops "at" it.
+const STOP_AHEAD = 56;
+
+//  ?fast in the URL shrinks gaps 10× — for testing, never the real pace.
+const FAST = new URLSearchParams(window.location.search).has('fast');
 
 export class Game extends Scene
 {
@@ -43,6 +59,7 @@ export class Game extends Scene
         this.paintRidge('mid', 140, 0x55805e, x =>
             30 + 14 * Math.sin(x * Math.PI * 2 / 120) + 8 * Math.sin(x * Math.PI * 2 / 45 + 2));
         this.paintPath();
+        this.paintSignpost();
 
         //  Each band is two copies of its texture side by side. Both slide
         //  left; when the pair has moved one full tile, it snaps back — the
@@ -61,22 +78,168 @@ export class Game extends Scene
             frameRate: 10,
             repeat: -1
         });
-        this.wanda = this.add.sprite(110, GROUND_Y, 'wanda-walk').setOrigin(0.5, 1);
+        this.wanda = this.add.sprite(WANDA_X, GROUND_Y, 'wanda-walk').setOrigin(0.5, 1).setDepth(10);
         this.wanda.play('walk');
+
+        //  The distance clock. Advances ONLY while walking — so it pauses at
+        //  every stop, and later at the campfire. Everything times off it.
+        this.distanceM = 0;
+        this.walking = true;
+        this.distanceText = this.add.text(346, 14, '0.0 km', {
+            fontFamily: 'Courier New, monospace',
+            fontSize: 15,
+            color: '#476578'
+        }).setOrigin(1, 0).setResolution(3).setDepth(20);
+
+        this.landmark = null;        // the signpost currently on (or entering) screen
+        this.landmarkArmed = false;  // true = it's a real stop; false = already visited
+        this.rollNextLandmark();
+
+        this.buildDecisionCard();
     }
 
     update (time, delta)
     {
+        if (!this.walking) return;   // stopped at a landmark: world holds its breath
+
+        const dt = delta / 1000;
+
         for (const layer of this.layers)
         {
-            layer.offset = (layer.offset + layer.speed * delta / 1000) % TEX_W;
+            layer.offset = (layer.offset + layer.speed * dt) % TEX_W;
             const x = -Math.round(layer.offset);   // whole pixels only — keeps the grid crisp
             layer.a.x = x;
             layer.b.x = x + TEX_W;
         }
+
+        this.distanceM += WALK_MPS * dt;
+        this.distanceText.setText((this.distanceM / 1000).toFixed(1) + ' km');
+
+        //  Time (in walked distance) for the next landmark? Spawn it off the
+        //  right edge — it approaches with the world, never pops from a timer.
+        if (!this.landmark && this.distanceM >= this.nextLandmarkAtM)
+        {
+            this.landmark = this.add.image(TEX_W + 40, GROUND_Y + 4, 'signpost')
+                .setOrigin(0.5, 1)
+                .setDepth(5);
+            this.landmarkArmed = true;
+        }
+
+        if (this.landmark)
+        {
+            //  The sign rides the path band: same speed, same direction.
+            this.landmark.x -= PATH_SPEED * dt;
+
+            if (this.landmarkArmed && this.landmark.x <= WANDA_X + STOP_AHEAD)
+            {
+                this.arriveAtLandmark();
+            }
+            else if (this.landmark.x < -40)
+            {
+                this.landmark.destroy();
+                this.landmark = null;
+            }
+        }
+    }
+
+    //  --- the stop-and-choose loop ---
+
+    rollNextLandmark ()
+    {
+        const rollA = Math.random() * GAP_ROLL_S;
+        const rollB = Math.random() * GAP_ROLL_S;
+        const gapS = (GAP_FLOOR_S + (rollA + rollB) / 2) / (FAST ? 10 : 1);
+        this.nextLandmarkAtM = this.distanceM + gapS * WALK_MPS;
+    }
+
+    arriveAtLandmark ()
+    {
+        this.walking = false;
+        this.landmarkArmed = false;   // resolved — when we resume, she walks past it
+
+        //  A stopped hiker mid-stride reads as a glitch; the standing pose
+        //  (checking her map) reads as "paused to think".
+        this.wanda.stop();
+        this.wanda.setTexture('wanda-stand');
+
+        //  A beat of quiet before the card — arrival first, question second.
+        this.time.delayedCall(450, () => {
+            this.card.setVisible(true);
+            this.tweens.add({ targets: this.card, alpha: 1, duration: 300 });
+        });
+    }
+
+    resolveChoice (label)
+    {
+        //  (Which option was picked doesn't matter yet — Session 4 gives
+        //  choices real effects when content becomes data.)
+        this.tweens.add({
+            targets: this.card,
+            alpha: 0,
+            duration: 250,
+            onComplete: () => this.card.setVisible(false)
+        });
+
+        this.wanda.setTexture('wanda-walk');
+        this.wanda.play('walk');
+        this.walking = true;
+        this.rollNextLandmark();
+    }
+
+    //  The A/B decision card: a panel low on the screen, two big side-by-side
+    //  buttons in the thumb zone. Placeholder UI — real art comes later.
+    buildDecisionCard ()
+    {
+        const panel = this.add.rectangle(180, 552, 336, 156, 0x2e2a26, 0.93);
+        const frame = this.add.rectangle(180, 552, 336, 156).setStrokeStyle(2, 0xf4ede0, 0.35);
+
+        const prompt = this.add.text(180, 498, 'The trail splits at a cairn.', {
+            fontFamily: 'Courier New, monospace',
+            fontSize: 15,
+            color: '#f4ede0',
+            align: 'center',
+            wordWrap: { width: 300 }
+        }).setOrigin(0.5, 0).setResolution(3);
+
+        const makeButton = (x, fill, label) => {
+            const rect = this.add.rectangle(x, 585, 150, 62, fill)
+                .setInteractive({ useHandCursor: true });
+            const text = this.add.text(x, 585, label, {
+                fontFamily: 'Courier New, monospace',
+                fontSize: 14,
+                color: '#2e2a26',
+                align: 'center',
+                wordWrap: { width: 132 }
+            }).setOrigin(0.5).setResolution(3);
+            rect.on('pointerdown', () => this.resolveChoice(label));
+            return [rect, text];
+        };
+
+        this.card = this.add.container(0, 0, [
+            panel, frame, prompt,
+            ...makeButton(97, 0x9ab873, 'Take the high ridge'),
+            ...makeButton(263, 0xd9b380, 'Follow the low path')
+        ]).setDepth(100).setAlpha(0).setVisible(false);
     }
 
     //  --- placeholder texture painters (chunky shapes on the pixel grid) ---
+
+    //  A trailside signpost, ~32×46 on the shared pixel grid (landmarks are
+    //  small props — see ART-STYLE.md).
+    paintSignpost ()
+    {
+        const g = this.add.graphics();
+        g.fillStyle(0x7a5c40);                 // post
+        g.fillRect(14, 6, 6, 40);
+        g.fillStyle(0x9a7a54);                 // boards
+        g.fillRect(2, 8, 30, 10);
+        g.fillRect(6, 22, 22, 8);
+        g.fillStyle(0x5c4530);                 // board shadows
+        g.fillRect(2, 16, 30, 2);
+        g.fillRect(6, 28, 22, 2);
+        g.generateTexture('signpost', 34, 46);
+        g.destroy();
+    }
 
     //  Sparse clouds on transparency. Anything near the right edge is drawn
     //  again one tile-width to the left, so the wrap point never cuts a cloud.
