@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import content from '../content.json';
 
 //  The world is 4 horizontal bands (back to front), each scrolling
 //  right-to-left at its own speed — slower = further away (parallax).
@@ -27,11 +28,22 @@ const WALK_MPS = 1.4;                 // hiking pace ≈ 5 km/h; the distance cl
 const GAP_FLOOR_S = 30;
 const GAP_ROLL_S = 60;
 
-//  Where the sign is, relative to Wanda, when she stops "at" it.
+//  Where the landmark is, relative to Wanda, when she stops "at" it.
 const STOP_AHEAD = 56;
+
+//  The state a hike carries (GAME-DESIGN.md → state model). Soft stakes:
+//  values clamp to 0..5 and running low never fails anything.
+const STATE_START = { water: 3, energy: 3, morale: 3 };
+const STATE_MAX = 5;
 
 //  ?fast in the URL shrinks gaps 10× — for testing, never the real pace.
 const FAST = new URLSearchParams(window.location.search).has('fast');
+
+const UI_FONT = {
+    fontFamily: 'Courier New, monospace',
+    color: '#f4ede0',
+    align: 'center'
+};
 
 export class Game extends Scene
 {
@@ -60,6 +72,8 @@ export class Game extends Scene
             30 + 14 * Math.sin(x * Math.PI * 2 / 120) + 8 * Math.sin(x * Math.PI * 2 / 45 + 2));
         this.paintPath();
         this.paintSignpost();
+        this.paintCairn();
+        this.paintStream();
 
         //  Each band is two copies of its texture side by side. Both slide
         //  left; when the pair has moved one full tile, it snaps back — the
@@ -86,16 +100,22 @@ export class Game extends Scene
         this.distanceM = 0;
         this.walking = true;
         this.distanceText = this.add.text(346, 14, '0.0 km', {
-            fontFamily: 'Courier New, monospace',
-            fontSize: 15,
-            color: '#476578'
+            ...UI_FONT, fontSize: 15, color: '#476578'
         }).setOrigin(1, 0).setResolution(3).setDepth(20);
 
-        this.landmark = null;        // the signpost currently on (or entering) screen
-        this.landmarkArmed = false;  // true = it's a real stop; false = already visited
-        this.rollNextLandmark();
+        //  The hike's state, nudged by choice effects, gating some options.
+        this.state = { ...STATE_START };
+        this.stateText = this.add.text(14, 14, '', {
+            ...UI_FONT, fontSize: 13, color: '#476578', align: 'left'
+        }).setOrigin(0, 0).setResolution(3).setDepth(20);
+        this.refreshStateText();
 
-        this.buildDecisionCard();
+        //  Where we are in the content graph (src/game/content.json).
+        this.currentId = content.start;
+        this.landmark = null;        // the prop currently on (or entering) screen
+        this.landmarkArmed = false;  // true = it's a live stop; false = already visited
+        this.card = null;
+        this.rollNextLandmark();
     }
 
     update (time, delta)
@@ -115,11 +135,14 @@ export class Game extends Scene
         this.distanceM += WALK_MPS * dt;
         this.distanceText.setText((this.distanceM / 1000).toFixed(1) + ' km');
 
-        //  Time (in walked distance) for the next landmark? Spawn it off the
-        //  right edge — it approaches with the world, never pops from a timer.
+        //  Time (in walked distance) for the next stop? Spawn its landmark
+        //  off the right edge — it approaches with the world, never pops
+        //  from a timer.
         if (!this.landmark && this.distanceM >= this.nextLandmarkAtM)
         {
-            this.landmark = this.add.image(TEX_W + 40, GROUND_Y + 4, 'signpost')
+            const node = content.nodes[this.currentId];
+            const texture = this.textures.exists(node.landmark) ? node.landmark : 'signpost';
+            this.landmark = this.add.image(TEX_W + 40, GROUND_Y + 4, texture)
                 .setOrigin(0.5, 1)
                 .setDepth(5);
             this.landmarkArmed = true;
@@ -127,12 +150,12 @@ export class Game extends Scene
 
         if (this.landmark)
         {
-            //  The sign rides the path band: same speed, same direction.
+            //  The landmark rides the path band: same speed, same direction.
             this.landmark.x -= PATH_SPEED * dt;
 
             if (this.landmarkArmed && this.landmark.x <= WANDA_X + STOP_AHEAD)
             {
-                this.arriveAtLandmark();
+                this.arriveAtStop();
             }
             else if (this.landmark.x < -40)
             {
@@ -142,7 +165,7 @@ export class Game extends Scene
         }
     }
 
-    //  --- the stop-and-choose loop ---
+    //  --- the stop-and-choose loop, driven by the content graph ---
 
     rollNextLandmark ()
     {
@@ -152,7 +175,7 @@ export class Game extends Scene
         this.nextLandmarkAtM = this.distanceM + gapS * WALK_MPS;
     }
 
-    arriveAtLandmark ()
+    arriveAtStop ()
     {
         this.walking = false;
         this.landmarkArmed = false;   // resolved — when we resume, she walks past it
@@ -162,22 +185,47 @@ export class Game extends Scene
         this.wanda.stop();
         this.wanda.setTexture('wanda-stand');
 
+        const node = content.nodes[this.currentId];
+
         //  A beat of quiet before the card — arrival first, question second.
         this.time.delayedCall(450, () => {
-            this.card.setVisible(true);
+            this.card = node.type === 'ending' ? this.buildEnding(node) : this.buildCard(node);
             this.tweens.add({ targets: this.card, alpha: 1, duration: 300 });
         });
     }
 
-    resolveChoice (label)
+    //  Apply a node's/option's effects to hike state (softly clamped).
+    applyEffects (effects)
     {
-        //  (Which option was picked doesn't matter yet — Session 4 gives
-        //  choices real effects when content becomes data.)
+        for (const [key, delta] of Object.entries(effects || {}))
+        {
+            this.state[key] = Math.max(0, Math.min(STATE_MAX, (this.state[key] || 0) + delta));
+        }
+        this.refreshStateText();
+    }
+
+    meetsRequires (requires)
+    {
+        return Object.entries(requires || {}).every(([key, min]) => (this.state[key] || 0) >= min);
+    }
+
+    refreshStateText ()
+    {
+        const { water, energy, morale } = this.state;
+        this.stateText.setText(`water ${water} · energy ${energy} · morale ${morale}`);
+    }
+
+    //  Resolve the current stop: apply effects, advance the graph, walk on.
+    resolveStop (effects, nextId)
+    {
+        this.applyEffects(effects);
+        this.currentId = nextId;
+
         this.tweens.add({
             targets: this.card,
             alpha: 0,
             duration: 250,
-            onComplete: () => this.card.setVisible(false)
+            onComplete: () => { this.card.destroy(); this.card = null; }
         });
 
         this.wanda.setTexture('wanda-walk');
@@ -186,40 +234,83 @@ export class Game extends Scene
         this.rollNextLandmark();
     }
 
-    //  The A/B decision card: a panel low on the screen, two big side-by-side
-    //  buttons in the thumb zone. Placeholder UI — real art comes later.
-    buildDecisionCard ()
+    //  An ending resolves into a fresh trail from the top of the graph.
+    startNewTrail ()
     {
-        const panel = this.add.rectangle(180, 552, 336, 156, 0x2e2a26, 0.93);
-        const frame = this.add.rectangle(180, 552, 336, 156).setStrokeStyle(2, 0xf4ede0, 0.35);
+        this.distanceM = 0;
+        this.state = { ...STATE_START };
+        this.refreshStateText();
+        this.resolveStop({}, content.start);
+    }
 
-        const prompt = this.add.text(180, 498, 'The trail splits at a cairn.', {
-            fontFamily: 'Courier New, monospace',
-            fontSize: 15,
-            color: '#f4ede0',
-            align: 'center',
-            wordWrap: { width: 300 }
-        }).setOrigin(0.5, 0).setResolution(3);
+    //  --- cards, built from whatever node just arrived ---
 
-        const makeButton = (x, fill, label) => {
-            const rect = this.add.rectangle(x, 585, 150, 62, fill)
-                .setInteractive({ useHandCursor: true });
+    //  Bottom panel: two option buttons for a choice, one for a beat.
+    //  Buttons sit side by side in the thumb zone, big tap targets.
+    buildCard (node)
+    {
+        const children = [
+            this.add.rectangle(180, 552, 336, 156, 0x2e2a26, 0.93),
+            this.add.rectangle(180, 552, 336, 156).setStrokeStyle(2, 0xf4ede0, 0.35),
+            this.add.text(180, 494, node.prompt, {
+                ...UI_FONT, fontSize: 15, wordWrap: { width: 304 }
+            }).setOrigin(0.5, 0).setResolution(3)
+        ];
+
+        const addButton = (x, w, fill, label, enabled, onTap) => {
+            const rect = this.add.rectangle(x, 585, w, 62, fill, enabled ? 1 : 0.35);
             const text = this.add.text(x, 585, label, {
-                fontFamily: 'Courier New, monospace',
-                fontSize: 14,
-                color: '#2e2a26',
-                align: 'center',
-                wordWrap: { width: 132 }
-            }).setOrigin(0.5).setResolution(3);
-            rect.on('pointerdown', () => this.resolveChoice(label));
-            return [rect, text];
+                ...UI_FONT, fontSize: 14, color: '#2e2a26', wordWrap: { width: w - 18 }
+            }).setOrigin(0.5).setResolution(3).setAlpha(enabled ? 1 : 0.5);
+            if (enabled)
+            {
+                rect.setInteractive({ useHandCursor: true });
+                rect.on('pointerdown', onTap);
+            }
+            children.push(rect, text);
         };
 
-        this.card = this.add.container(0, 0, [
-            panel, frame, prompt,
-            ...makeButton(97, 0x9ab873, 'Take the high ridge'),
-            ...makeButton(263, 0xd9b380, 'Follow the low path')
-        ]).setDepth(100).setAlpha(0).setVisible(false);
+        if (node.type === 'choice')
+        {
+            const fills = [0x9ab873, 0xd9b380];
+            node.options.forEach((opt, i) => {
+                addButton(i === 0 ? 97 : 263, 150, fills[i],
+                    opt.label,
+                    this.meetsRequires(opt.requires),
+                    () => this.resolveStop(opt.effects, opt.next));
+            });
+        }
+        else    // beat: shows something, asks nothing — a single gentle button
+        {
+            addButton(180, 240, 0x9ab873, 'Walk on',
+                true,
+                () => this.resolveStop(node.effects, node.next));
+        }
+
+        return this.add.container(0, 0, children).setDepth(100).setAlpha(0);
+    }
+
+    //  An ending: the arrival screen — centered, unhurried, one button.
+    buildEnding (node)
+    {
+        const button = this.add.rectangle(180, 402, 220, 56, 0x9ab873)
+            .setInteractive({ useHandCursor: true });
+        button.on('pointerdown', () => this.startNewTrail());
+
+        return this.add.container(0, 0, [
+            this.add.rectangle(180, 320, 320, 250, 0x2e2a26, 0.96),
+            this.add.rectangle(180, 320, 320, 250).setStrokeStyle(2, 0xf4ede0, 0.35),
+            this.add.text(180, 228, 'JOURNEY\'S END', {
+                ...UI_FONT, fontSize: 12, color: '#d9b380'
+            }).setOrigin(0.5, 0).setResolution(3),
+            this.add.text(180, 258, node.prompt, {
+                ...UI_FONT, fontSize: 15, wordWrap: { width: 280 }
+            }).setOrigin(0.5, 0).setResolution(3),
+            button,
+            this.add.text(180, 402, 'Begin a new trail', {
+                ...UI_FONT, fontSize: 14, color: '#2e2a26'
+            }).setOrigin(0.5).setResolution(3)
+        ]).setDepth(100).setAlpha(0);
     }
 
     //  --- placeholder texture painters (chunky shapes on the pixel grid) ---
@@ -238,6 +329,37 @@ export class Game extends Scene
         g.fillRect(2, 16, 30, 2);
         g.fillRect(6, 28, 22, 2);
         g.generateTexture('signpost', 34, 46);
+        g.destroy();
+    }
+
+    //  A cairn: a little stack of trail-marker stones.
+    paintCairn ()
+    {
+        const g = this.add.graphics();
+        g.fillStyle(0x8d8578);
+        g.fillRect(4, 26, 28, 10);
+        g.fillStyle(0xa39a8a);
+        g.fillRect(8, 16, 20, 10);
+        g.fillStyle(0x8d8578);
+        g.fillRect(12, 8, 12, 8);
+        g.fillStyle(0xa39a8a);
+        g.fillRect(15, 2, 6, 6);
+        g.generateTexture('cairn', 36, 36);
+        g.destroy();
+    }
+
+    //  A stream: a wet strip crossing the path where it meets the trail.
+    paintStream ()
+    {
+        const g = this.add.graphics();
+        g.fillStyle(0x7fb2c8);
+        g.fillRect(0, 4, 44, 10);
+        g.fillStyle(0xa8d0e0);
+        g.fillRect(6, 6, 10, 2);
+        g.fillRect(24, 10, 12, 2);
+        g.fillStyle(0x5e93ab);
+        g.fillRect(0, 12, 44, 2);
+        g.generateTexture('stream', 44, 16);
         g.destroy();
     }
 

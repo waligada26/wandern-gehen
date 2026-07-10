@@ -1,0 +1,98 @@
+{
+  "start": "fork_cairn_01",
+  "nodes": {
+    "fork_cairn_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The trail splits at a cairn.",
+      "landmark": "cairn",
+      "options": [
+        {
+          "label": "Take the high ridge",
+          "effects": { "energy": -1 },
+          "next": "vista_overlook_01"
+        },
+        {
+          "label": "Follow the low path",
+          "effects": {},
+          "next": "stream_crossing_01"
+        }
+      ]
+    },
+    "vista_overlook_01": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The trees open up. Below, the whole valley is holding still in the light.",
+      "landmark": "signpost",
+      "effects": { "morale": 1 },
+      "next": "stream_crossing_01"
+    },
+    "stream_crossing_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A shallow stream chatters across the path.",
+      "landmark": "stream",
+      "options": [
+        {
+          "label": "Stop and refill the canteen",
+          "effects": { "water": 2 },
+          "next": "sunset_pause_01"
+        },
+        {
+          "label": "Hop across and press on",
+          "effects": { "energy": -1 },
+          "next": "sunset_pause_01"
+        }
+      ]
+    },
+    "sunset_pause_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The light has gone long and golden behind the treeline.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Stop and watch a while",
+          "effects": { "morale": 1 },
+          "next": "log_rest_01"
+        },
+        {
+          "label": "Walk on through the gold",
+          "effects": {},
+          "next": "log_rest_01"
+        }
+      ]
+    },
+    "log_rest_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A mossy log sits at a bend, exactly bench-shaped.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Sit, sip, and watch a while",
+          "requires": { "water": 1 },
+          "effects": { "water": -1, "energy": 1, "morale": 1 },
+          "next": "trail_end_01"
+        },
+        {
+          "label": "Keep a good rhythm going",
+          "effects": {},
+          "next": "trail_end_01"
+        }
+      ]
+    },
+    "trail_end_01": {
+      "type": "ending",
+      "trigger": "authored",
+      "biome": "forest",
+      "prompt": "The path climbs one last rise and opens onto a quiet overlook. That's the trail for today.",
+      "landmark": "cairn"
+    }
+  }
+}
