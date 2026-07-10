@@ -1,3 +1,4 @@
+import { Camp } from './scenes/Camp';
 import { Game as MainGame } from './scenes/Game';
 import { AUTO, Game, Scale } from 'phaser';
 
@@ -15,6 +16,7 @@ const config = {
         autoCenter: Scale.CENTER_BOTH
     },
     scene: [
+        Camp,       // runs first: shows the rest scene if a save exists
         MainGame
     ]
 };

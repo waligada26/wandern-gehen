@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import content from '../content.json';
+import { writeSave } from '../save';
 
 //  The world is 4 horizontal bands (back to front), each scrolling
 //  right-to-left at its own speed — slower = further away (parallax).
@@ -52,6 +53,12 @@ export class Game extends Scene
         super('Game');
     }
 
+    init (data)
+    {
+        //  A save handed over from the Camp scene, or null for a fresh hike.
+        this.savedHike = data ? data.save : null;
+    }
+
     preload ()
     {
         //  Standing pose (map in hand) — used when she pauses at landmarks.
@@ -96,26 +103,60 @@ export class Game extends Scene
         this.wanda.play('walk');
 
         //  The distance clock. Advances ONLY while walking — so it pauses at
-        //  every stop, and later at the campfire. Everything times off it.
-        this.distanceM = 0;
+        //  every stop and at the campfire. Everything times off it.
+        this.distanceM = this.savedHike ? this.savedHike.distanceM : 0;
         this.walking = true;
         this.distanceText = this.add.text(346, 14, '0.0 km', {
             ...UI_FONT, fontSize: 15, color: '#476578'
         }).setOrigin(1, 0).setResolution(3).setDepth(20);
 
         //  The hike's state, nudged by choice effects, gating some options.
-        this.state = { ...STATE_START };
+        this.state = this.savedHike ? { ...this.savedHike.state } : { ...STATE_START };
         this.stateText = this.add.text(14, 14, '', {
             ...UI_FONT, fontSize: 13, color: '#476578', align: 'left'
         }).setOrigin(0, 0).setResolution(3).setDepth(20);
         this.refreshStateText();
 
         //  Where we are in the content graph (src/game/content.json).
-        this.currentId = content.start;
+        //  If the save points at an unresolved stop whose landmark had
+        //  already arrived, the restored spacing value is in the past —
+        //  so the landmark simply scrolls in again and re-asks. That's
+        //  the intended behavior, not a bug.
+        this.currentId = this.savedHike ? this.savedHike.currentId : content.start;
         this.landmark = null;        // the prop currently on (or entering) screen
         this.landmarkArmed = false;  // true = it's a live stop; false = already visited
         this.card = null;
-        this.rollNextLandmark();
+        if (this.savedHike)
+        {
+            this.nextLandmarkAtM = this.savedHike.nextLandmarkAtM;
+        }
+        else
+        {
+            this.rollNextLandmark();
+        }
+
+        //  Saving: after every resolved stop, on a slow autosave tick while
+        //  walking, and when the tab is hidden (phone locked, app switched —
+        //  the moment Wanda "makes camp").
+        this.time.addEvent({ delay: 5000, loop: true, callback: () => this.saveNow() });
+        this.onVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') this.saveNow();
+        };
+        document.addEventListener('visibilitychange', this.onVisibilityChange);
+        this.events.on('shutdown', () =>
+            document.removeEventListener('visibilitychange', this.onVisibilityChange));
+
+        this.saveNow();
+    }
+
+    saveNow ()
+    {
+        writeSave({
+            distanceM: this.distanceM,
+            state: this.state,
+            currentId: this.currentId,
+            nextLandmarkAtM: this.nextLandmarkAtM
+        });
     }
 
     update (time, delta)
@@ -232,6 +273,7 @@ export class Game extends Scene
         this.wanda.play('walk');
         this.walking = true;
         this.rollNextLandmark();
+        this.saveNow();
     }
 
     //  An ending resolves into a fresh trail from the top of the graph.
