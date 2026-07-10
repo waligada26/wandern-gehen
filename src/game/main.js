@@ -8,7 +8,7 @@ const config = {
     width: 360,
     height: 640,
     parent: 'game-container',
-    backgroundColor: '#87a8c4',
+    backgroundColor: '#aacfe4',
     pixelArt: true,
     scale: {
         mode: Scale.FIT,
