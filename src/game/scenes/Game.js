@@ -80,6 +80,28 @@ const DAY_PALETTE = [
 //  Silhouettes must stay readable at night — the wash never exceeds this.
 const DAY_WASH_MAX_ALPHA = 0.35;
 
+//  --- biome palettes ---
+//  Base colours for the three scenery bands, applied as image tints — the
+//  band textures are painted in white/grays so a tint IS the band colour
+//  (a multiply-tint can only darken, never recolour, a pre-coloured
+//  texture). The day/night wash and linger tints composite on top,
+//  unchanged. Tune freely; fg is the path band.
+const BIOME_PALETTES = [
+    { key: 'forest',  fg: 0x3d5a3d, mid: 0x4a6b4a, far: 0x5c7a5c },
+    { key: 'meadow',  fg: 0xc2b280, mid: 0x9caf6a, far: 0xc9c58e },
+    { key: 'coast',   fg: 0xd9c9a3, mid: 0x6bb0b8, far: 0xbcd6e0 },
+    { key: 'wetland', fg: 0x6a7a55, mid: 0x7d9b70, far: 0x9fb08a },
+    { key: 'alpine',  fg: 0x8a8f9c, mid: 0x9aa6b5, far: 0xc3ccd8 },
+    { key: 'snow',    fg: 0xe8ecf2, mid: 0xb9c4d4, far: 0xd6dde8 }
+];
+
+//  How far she walks through each biome before the next one, and how many
+//  walked meters the crossfade spans (~13 s of walking at WALK_MPS —
+//  woods drifting into meadow, never a scene swap). ?fast compresses the
+//  biome length 10× like everything else.
+const BIOME_LENGTH_M = FAST ? 150 : 1500;
+const BIOME_FADE_M = 18;
+
 const UI_FONT = {
     fontFamily: 'Courier New, monospace',
     color: '#f4ede0',
@@ -113,9 +135,11 @@ export class Game extends Scene
     create ()
     {
         this.paintClouds();
-        this.paintRidge('far', 120, 0x8fb0a0, x =>
+        //  Ridges are painted white and get their colour from the biome
+        //  tint (see BIOME_PALETTES).
+        this.paintRidge('far', 120, 0xffffff, x =>
             46 + 18 * Math.sin(x * Math.PI * 2 / 180) + 10 * Math.sin(x * Math.PI * 2 / 90 + 1.3));
-        this.paintRidge('mid', 140, 0x55805e, x =>
+        this.paintRidge('mid', 140, 0xffffff, x =>
             30 + 14 * Math.sin(x * Math.PI * 2 / 120) + 8 * Math.sin(x * Math.PI * 2 / 45 + 2));
         this.paintPath();
         this.paintSignpost();
@@ -171,6 +195,7 @@ export class Game extends Scene
             ...UI_FONT, fontSize: 15, color: '#476578'
         }).setOrigin(1, 0).setResolution(3).setDepth(20);
         this.updateDayWash();   // a restored hike resumes at its saved time of day
+        this.updateBiomeTint(); // ...and in its saved biome
 
         //  The hike's state, nudged by choice effects, gating some options.
         this.state = this.savedHike ? { ...this.savedHike.state } : { ...STATE_START };
@@ -280,6 +305,7 @@ export class Game extends Scene
         this.distanceM += stepM;
         this.distanceText.setText((this.distanceM / 1000).toFixed(1) + ' km');
         this.updateDayWash();
+        this.updateBiomeTint();
 
         //  The hat window burns down in walked meters — hiking time, never
         //  wall-clock, so it pauses at stops and at camp.
@@ -464,6 +490,41 @@ export class Game extends Scene
         const phase = (this.distanceM % DAY_CYCLE_M) / DAY_CYCLE_M;
         const { color, alpha } = this.dayWashAt(phase);
         this.dayWash.setFillStyle(color, Math.min(alpha, DAY_WASH_MAX_ALPHA));
+    }
+
+    //  --- biome tinting ---
+
+    //  Band colours at this walked distance: the current biome's palette,
+    //  crossfaded into the next one over the last BIOME_FADE_M meters of
+    //  each segment (the fade completes exactly at the boundary).
+    biomePaletteAt (m)
+    {
+        const n = BIOME_PALETTES.length;
+        const cur = BIOME_PALETTES[Math.floor(m / BIOME_LENGTH_M) % n];
+        const nxt = BIOME_PALETTES[(Math.floor(m / BIOME_LENGTH_M) + 1) % n];
+        const into = m % BIOME_LENGTH_M;
+        const fadeStart = BIOME_LENGTH_M - BIOME_FADE_M;
+        if (into < fadeStart) return cur;
+        const t = (into - fadeStart) / BIOME_FADE_M;
+        return {
+            fg: this.lerpColor(cur.fg, nxt.fg, t),
+            mid: this.lerpColor(cur.mid, nxt.mid, t),
+            far: this.lerpColor(cur.far, nxt.far, t)
+        };
+    }
+
+    updateBiomeTint ()
+    {
+        const p = this.biomePaletteAt(this.distanceM);
+        const tintByKey = { path: p.fg, mid: p.mid, far: p.far };
+        this.layers.forEach((layer, i) => {
+            const tint = tintByKey[LAYERS[i].key];
+            if (tint !== undefined)
+            {
+                layer.a.setTint(tint);
+                layer.b.setTint(tint);
+            }
+        });
     }
 
     //  Piecewise-linear colour/alpha between palette stops, wrapping the
@@ -1122,18 +1183,20 @@ export class Game extends Scene
     }
 
     //  The foreground: grass lip, dirt, and wrapped pebble speckles.
+    //  Painted in white/grays — the biome tint supplies the hue, and the
+    //  gray steps keep the dirt/grass/pebble contrast under any palette.
     paintPath ()
     {
         const g = this.add.graphics();
-        g.fillStyle(0xb09068);
+        g.fillStyle(0xffffff);
         g.fillRect(0, 0, TEX_W, 180);
-        g.fillStyle(0x6f9a5f);
+        g.fillStyle(0x8f8f8f);
         for (let x = 0; x < TEX_W; x += 4)
         {
             const notch = 12 + 4 * Math.sin(x * Math.PI * 2 / 40) + 2 * Math.sin(x * Math.PI * 2 / 24 + 1);
             g.fillRect(x, 0, 4, Math.round(notch / 2) * 2);
         }
-        g.fillStyle(0x8a6f50);
+        g.fillStyle(0xc4c4c4);
         const pebbles = [
             [24, 60], [80, 100], [130, 44], [170, 130], [210, 74],
             [260, 50], [300, 110], [340, 66], [50, 150], [230, 156],
@@ -1149,7 +1212,7 @@ export class Game extends Scene
         }
         //  Grass tufts scattered on the dirt — extra motion cues, since the
         //  foreground's speed is what sells the walking.
-        g.fillStyle(0x6f9a5f);
+        g.fillStyle(0x8f8f8f);
         const tufts = [
             [40, 42], [96, 78], [156, 112], [204, 56], [252, 146],
             [296, 70], [336, 104], [16, 134], [124, 30], [270, 28]

@@ -17,6 +17,10 @@ The full design lives in these docs. Consult the relevant one before answering, 
 - **ART-STYLE.md** — visual direction, parallax layers, the seamless-loop gotcha, Pixel Lab pipeline, mobile rendering
 - **AUDIO.md** — the generative stem system, Tone.js, sound asset list
 - **ASSET-CHECKLIST.md** — what to generate, counts, the MVP subset
+- **CONTENT-INVENTORY.md** — the node schema and engine facts **as actually implemented** (regenerated after content changes)
+- **HANDOVER.md** — where the last session left off; read alongside the session plan
+
+The design docs describe intent; where they and the code disagree (e.g. GAME-DESIGN.md's `setpiece`/`trigger` fields), **CONTENT-INVENTORY.md and the code are the truth** — don't author content against unimplemented fields.
 
 **Session start:** I'll give you a session number. Read that session in BUILD-SESSIONS.md for its goal and "done when," plus whichever design doc it points to.
 

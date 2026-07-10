@@ -1,65 +1,91 @@
-# HANDOVER — state of the repo as of 10 July 2026
+# HANDOVER — state of the repo as of 10 July 2026 (Session 9)
 
-All 8 build sessions are done and deployed (https://waligada26.github.io/wandern-gehen/).
-This file is the context for the next session.
+Sessions 1–8 plus tonight's Session 9 are committed and pushed
+(https://waligada26.github.io/wandern-gehen/). **Nothing from Session 9 has
+been verified on a phone yet** — that's the first job next session.
 
-## Just finished (content.json)
+## Done this session (all in the code, all pushed)
 
-- Trail is 6 nodes: `fork_cairn_01` (choice) → `vista_overlook_01` (beat) →
-  `stream_crossing_01` (choice) → `sunset_pause_01` (choice) → `log_rest_01`
-  (choice) → `trail_end_01` (ending).
-- `log_rest_01` was briefly given a follow-up beat (`log_rest_sit_01`) and then
-  **reverted** — both options now go straight to `trail_end_01`; the node is a
-  clean A/B whose "Sit" option differs only by effects (and a `requires`).
-- **Beats show a card only.** There is no `behavior`/`setpiece` support — an
-  ending's `setpiece` field (per GAME-DESIGN.md's sketch) is NOT implemented,
-  and a beat is a prompt + "Walk on" button, nothing else.
+- **Linger beats (engine).** A beat node with a `"linger": { "ms", "tint" }`
+  object plays a held scene moment instead of a card: scroll eases to zero
+  over ~0.5s via a `scrollScale` factor, the prompt fades in as a buttonless
+  caption, an optional tint overlays at ~0.25 alpha, it holds `ms` (default
+  3000), reverses, and auto-advances to `next`. Effects apply when the hold
+  begins. `scrollScale` multiplies every world speed AND the distance step,
+  so the clock, hat window, and rare dice all pause with the scenery.
+- **Day/night wash (engine).** Persistent full-scene overlay at depth 15
+  (above world/Wanda ≤11, under HUD 20, linger tint 90, cards 100), lerped
+  through `DAY_PALETTE` by `distanceM`. One day per `DAY_CYCLE_M` = 840 m
+  (~10 min walking). Alpha hard-capped at `DAY_WASH_MAX_ALPHA` 0.35 so night
+  stays readable. New trails start at dawn (distance resets to 0).
+- **Biome palettes (engine) — LANDED, not pending.** `BIOME_PALETTES` (six
+  biomes × fg/mid/far) retint the three parallax bands via `setTint`; the
+  band textures are now painted white/gray so the tint IS the colour (a
+  multiply-tint can't brighten a pre-coloured texture). Distance-cycled:
+  `BIOME_LENGTH_M` = 1500 m per biome, `BIOME_FADE_M` = 18 m (~13 s)
+  crossfade finishing exactly at each boundary, looping forest → meadow →
+  coast → wetland → alpine → snow. Composites UNDER the wash and linger
+  tints. Built clean and watched on the dev server; not yet seen on phone.
+- **Content: four new stops, trunk rewired.** Six new nodes total (four
+  stops + two linger-payoff beats) spliced into the shared trunk after the
+  stream. Verified zero orphans, zero dangling pointers (12/12 reachable).
+- **CONTENT-INVENTORY.md regenerated** to match (documents the `linger`
+  field and the biome-palette reality note).
 
-## Node schema as implemented (src/game/content.json)
+## The trail now (12 stops longest, 9 shortest)
 
-- Choice: `type, trigger, biome, prompt, landmark, options[2]`; option =
-  `label, effects, next` + optional `requires`.
-- Beat: `type, trigger, biome, prompt, landmark, effects (optional), next`.
-- Ending: `type, trigger, biome, prompt, landmark`.
-- Unknown/null `landmark` falls back to the signpost prop — every stop
-  visually arrives at something.
-- Top level also has `start` and `creatures` (journal roster: fox/deer/yeti).
+fork_cairn_01 → [high: vista_overlook_01 (linger 3500)] → stream_crossing_01
+→ encounter_hiker_01 → sunset_pause_01 → pond_stones_01 [Skip a stone →
+pond_stones_beat_01 (linger 3000)] → marker_read_01 [Read it →
+marker_read_beat_01 (linger 3500)] → log_rest_01 → gate_01 → trail_end_01
 
-## State keys
+## Engine reality checks (carry these forward)
 
-- `water`, `energy`, `morale` — start 3, clamped 0–5 (`STATE_START` /
-  `STATE_MAX` in `src/game/scenes/Game.js`). Usable in `effects` and `requires`.
-- `distance` is the walking clock (`distanceM`), NOT an effects key — effects
-  can't move the hiker.
-
-## Hardcoded outside content.json (in src/game/scenes/Game.js)
-
-- `trigger` is decorative — every stop is distance-spaced; the engine never
+- `trigger` is decorative — the engine distance-spaces every stop and never
   reads the field.
-- The lucky-hat pickup card, hat window, and the fox/polaroid/journal flow are
-  code, not content nodes.
-- Fixed button labels: "Walk on" (beat), "Begin a new trail" (ending),
-  "Wear it" (hat).
+- **No distance cap anywhere in Game.js** — the node graph is the sole
+  authority on where a trail ends (`type: "ending"`).
+- Beat `behavior`/`setpiece` fields are NOT implemented. A beat shows a
+  "Walk on" card, or a held linger if it has a `linger` object. That's it.
+- The lucky-hat pickup and the fox/polaroid/journal flow are hardcoded in
+  Game.js, outside the content graph. Fixed labels: "Walk on", "Begin a new
+  trail", "Wear it".
+- State keys `water`/`energy`/`morale`: start 3, clamp 0–5. `distance` is
+  the clock (`distanceM`), NOT an effects key.
+- A node's `biome` field only tags journal entries and photo captions — the
+  scenery's biome palette cycles by walked distance (`BIOME_LENGTH_M`),
+  independent of the graph. Tying palette to the fork is a candidate next
+  task, not current behavior.
 
-## NEXT TASK: "sit and linger" on the walk screen
+## Tunables added this session (all near the top of Game.js)
 
-Make tapping "Sit, sip, and watch a while" play a visible moment with NO card:
-the card dismisses, Wanda sits (model it on the existing stand-pose swap —
-`pauseWalk()` sets `wanda-stand`; a sit does the same with a sit texture),
-the world stays paused for a beat or two, then she stands and walks on.
-Placeholder sit art is fine (or Pixel Lab `crouching`/sitting template later,
-~1 generation — see NOTES.md). Likely shape: an optional `pose`/`linger` field
-on options or nodes, read in `resolveStop`.
+`DAY_CYCLE_M` (840), `DAY_PALETTE` (stops around the 0..1 day loop),
+`DAY_WASH_MAX_ALPHA` (0.35), `BIOME_PALETTES` (6 × fg/mid/far),
+`BIOME_LENGTH_M` (1500), `BIOME_FADE_M` (18). `?fast` compresses landmark
+gaps, the day cycle, and biome length 10× and boosts rare rolls.
+
+## NEXT TASKS (in order)
+
+1. **Verify the whole session on a real phone** — nothing since the Session 8
+   push has been confirmed on-device: lingers, day/night wash, biome
+   crossfades, new trail order, and the still-untested iPhone audio fix
+   (`navigator.audioSession.type = 'playback'`). PWA caveat: the service
+   worker may serve the cached old build on first open — close fully and
+   reopen to get the new one.
+2. Then decide between: **(a)** tying biome changes to the fork choice
+   instead of distance, vs **(b)** a proper "sit and linger" that plays on
+   the walk screen at the mossy log (see NOTES.md for the pose-art plan).
+3. Music is a few days out — Jimmy composes stems in his DAW, then they're
+   wired via Tone.js to replace the placeholder synth stems.
 
 ## Open items
 
-- **iPhone audio is unresolved**: desktop plays (measured −18 dB at master),
-  phone was silent. `navigator.audioSession.type = 'playback'` fix is deployed
-  but untested on the phone; need the iOS version next time.
+- iPhone audio still unresolved (fix deployed, untested on the phone).
 - Stray repo `caniplantit42/wandern-gehen` still awaiting manual deletion in
-  the browser (wrong account, Session 1 mishap).
-- Real audio stems (Jimmy's DAW) and the Pixel Lab art pass are the two big
-  parallel tracks; placeholder synth stems and code-painted art fill the slots.
-- `?fast` URL flag = 10× landmark gaps + boosted rare rolls, for testing.
+  the browser (wrong account, Session 1 mishap). Never touch that account.
+- Real audio stems and the Pixel Lab art pass remain the two big parallel
+  tracks; placeholders fill every slot until the game is proven fun.
+- Ending reset snaps scenery back to forest-at-dawn behind the ending card
+  (distance → 0). Acceptable placeholder; flag if it should fade.
 - `CONTENT-INVENTORY.md` matches the current file; regenerate after content
-  changes. No half-done edits are in flight — working tree is clean.
+  changes. Working tree is clean after this session's final commit.

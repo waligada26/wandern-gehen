@@ -20,7 +20,10 @@ Top-level shape:
 ```
 type      "choice"
 trigger   informational only — see "hardcoded" notes below
-biome     used as the biome tag on journal entries / photo captions
+biome     used as the biome tag on journal entries / photo captions ONLY —
+          it does NOT colour the scenery. The parallax biome palettes cycle
+          by walked distance (BIOME_PALETTES / BIOME_LENGTH_M in Game.js),
+          independent of the graph.
 prompt    the card text
 landmark  texture key for the prop that scrolls in (unknown key → signpost fallback)
 options   exactly 2 of:
@@ -71,6 +74,10 @@ Defined in `src/game/scenes/Game.js` (`STATE_START` / `STATE_MAX`):
   hardcoded choices from Session 3 remain.
 - There is **no hardcoded trail-end or distance cap** — a trail ends only when
   the graph reaches a `type: "ending"` node.
+- **Scenery is distance-driven, not graph-driven:** the day/night wash
+  (`DAY_CYCLE_M`) and the biome band palettes (`BIOME_LENGTH_M`) both cycle on
+  walked meters in Game.js. Content can't currently set the time of day or the
+  scenery biome.
 
 ## The nodes (in trail order)
 
