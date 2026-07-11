@@ -20,12 +20,13 @@ import {
 const HORIZON = 190;
 const LAYERS = [
     { key: 'clouds', top: 26,  height: 180, speed: 6 },
-    //  far's painted haze top dissolves into the matching background sky.
+    //  far hills: sky flood-keyed to transparency, so clouds drift
+    //  behind the actual silhouettes instead of a hidden opaque wall.
     { key: 'far',    top: 70,  height: 120, speed: 14 },
-    //  horizon treeline: ~70px of canopy shows above HORIZON; the plane
-    //  covers everything below it.
-    { key: 'mid',    top: 120, height: 140, speed: 32 },
-    { key: 'plane',  top: HORIZON, height: 450, speed: 70 }
+    { key: 'plane',  top: HORIZON, height: 450, speed: 70 },
+    //  horizon treeline draws AFTER the plane: its undulating shadow
+    //  base sits ON the meadow (canopy above HORIZON, seat just below).
+    { key: 'mid',    top: 120, height: 100, speed: 32 }
 ];
 
 //  Every scenery texture is TEX_W wide and tiles seamlessly. The painted
@@ -37,12 +38,17 @@ const TEX_W = 360;
 //  Each type plants at a random row in its band. Nearer rows use bigger
 //  source sprites — the scale illusion without ever scaling pixels.
 //  Rows below the trail render in front of Wanda (see propDepth).
+//  Row height correlates with sprite size: higher = further = smaller.
+//  The far pair are 2:1 mock downscales that stitch the treeline to the
+//  meadow; the full-size trees stay near the trail.
 const PROP_TYPES = [
-    { key: 'wood-tree-small', rows: [215, 300], weight: 12 },
-    { key: 'wood-tree-med',   rows: [295, 390], weight: 14 },
-    { key: 'wood-tree-group', rows: [385, 445], weight: 7 },
-    { key: 'wood-tuft',       rows: [508, 600], weight: 26 },
-    { key: 'wood-fern',       rows: [508, 600], weight: 12 }
+    { key: 'wood-tree-far2',  rows: [200, 245], weight: 10 },
+    { key: 'wood-tree-far1',  rows: [235, 285], weight: 10 },
+    { key: 'wood-tree-small', rows: [280, 350], weight: 10 },
+    { key: 'wood-tree-med',   rows: [340, 410], weight: 12 },
+    { key: 'wood-tree-group', rows: [395, 445], weight: 6 },
+    { key: 'wood-tuft',       rows: [508, 600], weight: 24 },
+    { key: 'wood-fern',       rows: [508, 600], weight: 10 }
 ];
 //  Walked meters between plantings — the average of two rolls, like the
 //  landmark gaps, so medium spacing is common and extremes are rare.
@@ -51,7 +57,7 @@ const PROP_GAP_M = { floor: 1.2, roll: 5 };
 const GROUND_Y = 478;       // Wanda's row: where feet sit on the trail strip
 const WANDA_X = 110;
 
-const PATH_SPEED = LAYERS[3].speed;   // the plane's speed = speed at Wanda's feet, px/s
+const PATH_SPEED = LAYERS.find(l => l.key === 'plane').speed;   // speed at Wanda's feet, px/s
 const WALK_MPS = 1.4;                 // hiking pace ≈ 5 km/h; the distance clock's rate
 
 //  Landmark spacing (GAME-DESIGN.md → Timing): a hard floor so stretches of
@@ -162,8 +168,10 @@ export class Game extends Scene
         //  until Stage N of the ¾ recomposition.
         this.load.image('clouds', 'assets/wood-clouds.png');
         this.load.image('far', 'assets/wood-far.png');
-        this.load.image('mid', 'assets/wood-mid.png');
+        this.load.image('mid', 'assets/wood-horizon.png');
         //  Planted-prop textures (mock: iteration-1 trees + tuft/fern).
+        this.load.image('wood-tree-far1', 'assets/wood-tree-far1.png');
+        this.load.image('wood-tree-far2', 'assets/wood-tree-far2.png');
         this.load.image('wood-tree-small', 'assets/wood-tree-small.png');
         this.load.image('wood-tree-med', 'assets/wood-tree-med.png');
         this.load.image('wood-tree-group', 'assets/wood-tree-group.png');
