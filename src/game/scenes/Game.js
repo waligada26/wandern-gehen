@@ -13,14 +13,17 @@ import {
 //  Wanda never moves; the world slides past her.
 const LAYERS = [
     { key: 'clouds', top: 30,  height: 180, speed: 6 },
-    { key: 'far',    top: 240, height: 120, speed: 14 },
+    //  The far band's bottom sits exactly on the path top, so the ridge
+    //  grounds the horizon and the mid trees stand in front of it —
+    //  its painted haze top dissolves into the matching background sky.
+    { key: 'far',    top: 340, height: 120, speed: 14 },
     { key: 'mid',    top: 320, height: 140, speed: 32 },
     { key: 'path',   top: 460, height: 180, speed: 70 }
 ];
 
-//  Every texture is TEX_W wide and tiles seamlessly: silhouettes are built
-//  from sine waves whose periods divide TEX_W exactly, so the right edge
-//  continues perfectly into the left edge when the tile repeats.
+//  Every scenery texture is TEX_W wide and tiles seamlessly. The painted
+//  woodland layers (Section A) are built to loop: sparse elements are
+//  duplicated across the wrap point, continuous strips are edge-matched.
 const TEX_W = 360;
 
 const GROUND_Y = 478;       // where feet sit on the path band
@@ -131,18 +134,17 @@ export class Game extends Scene
             frameWidth: 64,
             frameHeight: 64
         });
+        //  The woodland parallax layers (Section A) — painted art, one set
+        //  per setting eventually; the spine's virtual setting picks the
+        //  set from Section D on.
+        this.load.image('clouds', 'assets/wood-clouds.png');
+        this.load.image('far', 'assets/wood-far.png');
+        this.load.image('mid', 'assets/wood-mid.png');
+        this.load.image('path', 'assets/wood-path.png');
     }
 
     create ()
     {
-        this.paintClouds();
-        //  Ridges are painted white and get their colour from the biome
-        //  tint (see BIOME_PALETTES).
-        this.paintRidge('far', 120, 0xffffff, x =>
-            46 + 18 * Math.sin(x * Math.PI * 2 / 180) + 10 * Math.sin(x * Math.PI * 2 / 90 + 1.3));
-        this.paintRidge('mid', 140, 0xffffff, x =>
-            30 + 14 * Math.sin(x * Math.PI * 2 / 120) + 8 * Math.sin(x * Math.PI * 2 / 45 + 2));
-        this.paintPath();
         this.paintSignpost();
         this.paintCairn();
         this.paintStream();
@@ -178,8 +180,11 @@ export class Game extends Scene
         //  The day/night wash: above the world and Wanda (≤11), below the
         //  HUD (20), cards (100), and a linger tint (90) — so a linger's
         //  colour composites on top and evening reads warm-over-blue.
+        //  Object alpha stays 1; updateDayWash drives the FILL alpha.
+        //  (Session 9 bug, caught in Section A: created at setAlpha(0),
+        //  the wash never rendered — fill alpha × object alpha 0 = 0.)
         this.dayWash = this.add.rectangle(180, 320, 360, 640, 0xffffff)
-            .setDepth(15).setAlpha(0);
+            .setDepth(15).setFillStyle(0xffffff, 0);
 
         //  The distance clock. Advances ONLY while walking — so it pauses at
         //  every stop and at the campfire. Everything times off it.
@@ -601,16 +606,15 @@ export class Game extends Scene
 
     updateBiomeTint ()
     {
-        const p = this.biomePaletteAt(this.distanceM);
-        const tintByKey = { path: p.fg, mid: p.mid, far: p.far };
-        this.layers.forEach((layer, i) => {
-            const tint = tintByKey[LAYERS[i].key];
-            if (tint !== undefined)
-            {
-                layer.a.setTint(tint);
-                layer.b.setTint(tint);
-            }
-        });
+        //  TODO(parked → Section D, setting→scenery): neutralized with the
+        //  painted woodland layers (A1 decision (b)). A multiply-tint can
+        //  only darken, so it would drag painted art through muddy color
+        //  casts — scenery layers are no longer tinted at all, and the
+        //  meter-based BIOME_PALETTES cycle is retired with it. When
+        //  Section D adds per-setting layer sets, scenery switches on the
+        //  spine's virtual setting (with crossfades) INSTEAD of walked
+        //  meters — wire that here. The alpha-blend day-wash and linger
+        //  tints are separate systems and still composite on top.
     }
 
     //  Piecewise-linear colour/alpha between palette stops, wrapping the
@@ -1240,89 +1244,4 @@ export class Game extends Scene
         g.destroy();
     }
 
-    //  Sparse clouds on transparency. Anything near the right edge is drawn
-    //  again one tile-width to the left, so the wrap point never cuts a cloud.
-    paintClouds ()
-    {
-        const g = this.add.graphics();
-        g.fillStyle(0xe8f2f8);
-        const clouds = [
-            { x: 30,  y: 40,  w: 56, h: 12 },
-            { x: 150, y: 100, w: 40, h: 10 },
-            { x: 250, y: 20,  w: 70, h: 14 },
-            { x: 330, y: 70,  w: 48, h: 10 }
-        ];
-        for (const c of clouds)
-        {
-            for (const dx of [0, -TEX_W])
-            {
-                g.fillRect(c.x + dx, c.y, c.w, c.h);
-                g.fillRect(c.x + dx + 8, c.y - 6, c.w - 20, 6);
-            }
-        }
-        g.generateTexture('clouds', TEX_W, 180);
-        g.destroy();
-    }
-
-    //  A ridgeline: solid color below a wavy top edge, sampled in chunky
-    //  6px columns and quantized to 2px so it stays on the pixel grid.
-    paintRidge (key, height, color, profile)
-    {
-        const g = this.add.graphics();
-        g.fillStyle(color);
-        for (let x = 0; x < TEX_W; x += 6)
-        {
-            const top = Math.round(profile(x) / 2) * 2;
-            g.fillRect(x, top, 6, height - top);
-        }
-        g.generateTexture(key, TEX_W, height);
-        g.destroy();
-    }
-
-    //  The foreground: grass lip, dirt, and wrapped pebble speckles.
-    //  Painted in white/grays — the biome tint supplies the hue, and the
-    //  gray steps keep the dirt/grass/pebble contrast under any palette.
-    paintPath ()
-    {
-        const g = this.add.graphics();
-        g.fillStyle(0xffffff);
-        g.fillRect(0, 0, TEX_W, 180);
-        g.fillStyle(0x8f8f8f);
-        for (let x = 0; x < TEX_W; x += 4)
-        {
-            const notch = 12 + 4 * Math.sin(x * Math.PI * 2 / 40) + 2 * Math.sin(x * Math.PI * 2 / 24 + 1);
-            g.fillRect(x, 0, 4, Math.round(notch / 2) * 2);
-        }
-        g.fillStyle(0xc4c4c4);
-        const pebbles = [
-            [24, 60], [80, 100], [130, 44], [170, 130], [210, 74],
-            [260, 50], [300, 110], [340, 66], [50, 150], [230, 156],
-            [12, 96], [60, 34], [104, 128], [146, 82], [190, 40],
-            [242, 122], [284, 88], [322, 142], [352, 36], [70, 64]
-        ];
-        for (const [x, y] of pebbles)
-        {
-            for (const dx of [0, -TEX_W])
-            {
-                g.fillRect(x + dx, y, 6, 4);
-            }
-        }
-        //  Grass tufts scattered on the dirt — extra motion cues, since the
-        //  foreground's speed is what sells the walking.
-        g.fillStyle(0x8f8f8f);
-        const tufts = [
-            [40, 42], [96, 78], [156, 112], [204, 56], [252, 146],
-            [296, 70], [336, 104], [16, 134], [124, 30], [270, 28]
-        ];
-        for (const [x, y] of tufts)
-        {
-            for (const dx of [0, -TEX_W])
-            {
-                g.fillRect(x + dx, y, 4, 4);
-                g.fillRect(x + dx + 4, y + 2, 2, 2);
-            }
-        }
-        g.generateTexture('path', TEX_W, 180);
-        g.destroy();
-    }
 }
