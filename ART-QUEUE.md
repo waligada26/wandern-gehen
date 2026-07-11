@@ -41,7 +41,7 @@ the end of BUILD-SESSIONS.md.
 
 ## GATE 1 — STYLE LOCK
 
-- [ ] **G1**: **the hiker (Wanda)** — 64×64, right-facing only:
+- [~] **G1**: **the hiker (Wanda)** — 64×64, right-facing only:
   8-frame walk cycle (512×64 sheet, replaces
   `assets/wanda-walk-east.png`) + one standing pose (64×64, replaces
   `assets/wanda-stand-east.png`). **Explicitly an exploration**:
