@@ -1,7 +1,7 @@
 # SEGMENT-TABLE — planning artifact for the procedural spine
 
-> **PROPOSAL — tags and groupings pending human review. The spine does
-> not exist yet (ENGINE-STATE §3/§6); this doc plans it.**
+> **v1.1 — reviewed 11 Jul 2026; open items marked ⚠️ remain open.**
+> **The spine does not exist yet (ENGINE-STATE §3/§6); this doc plans it.**
 
 Derived 11 July 2026 from the live `src/game/content.json` (commit
 `cc79df4`, 46 nodes) by walking the actual next-pointer graph. A
@@ -28,10 +28,13 @@ which. Nothing in this doc changes code or content.
   `clear` means "no wet/misty active". `goldenhour`/`night` are
   **parked** — time-of-day is unreadable by content/engine decisions
   (ENGINE-STATE §8).
-- ⚠️ Setting availability itself is future work: scenery biome cycles
-  by walked meters and is equally unreadable. Proposal: the stitcher
-  OWNS a virtual setting state it advances as it deals segments, rather
-  than reading the screen. Pending review.
+- Setting availability: scenery biome cycles by walked meters and is
+  equally unreadable, so the stitcher OWNS a virtual setting state it
+  advances as it deals segments, rather than reading the screen.
+  **Locked end-state:** the stitcher's virtual setting will eventually
+  DRIVE the scenery palette cycle, replacing the autonomous meter-based
+  one — one authority on where you are. v1 accepts the mismatch
+  (placeholder tints make it near-invisible).
 
 ## The segments (20 segments · 46 nodes)
 
@@ -44,19 +47,19 @@ which. Nothing in this doc changes code or content.
 | seg_stream_coin | **stream_crossing_01** → coin_stream_01 → coin_beat \| (90/10) fish_look_beat → *out* | 2–3 | medium | water | — | every_hike_ok | Coin only makes sense beside the stream — bound by rule 1. The resource stop (water +2 / energy −1). ⚠️ coin B's weighted array mixes an OUTWARD exit (90) with an internal beat (10) — see REWIRING. |
 | seg_hiker | **encounter_hiker_01** → *out* (both options) | 1 | light | any | — | every_hike_ok | Different walkers can recur. |
 | seg_litter | **litter_packet_01** → litter_pocketed_beat → *out*; opt B → *out* | 1–2 | light | any ⚠️ | — | every_hike_ok | "In the grass" — grass is everywhere; `open` would over-restrict. |
-| seg_sunset | **sunset_pause_01** → *out* (both options) | 1 | light | goldenhour ⚠️ *(parked)* | — | once_per_hike | Two sunsets per hike is absurd. Truly needs time-of-day; until then it plays incoherently (as today) or sits out ⚠️. |
-| seg_rain | **rain_shower_01** → pine_shelter_beat \| (85/15) rain_walk_beat \| rainbow_beat → *out* | 2 | light | clear ⚠️, woodland ⚠️ | wet ~3 stops ⚠️ | every_hike_ok | "Rain starts" while already wet reads wrong → needs clear. Pine branch needs a tree → woodland (⚠️ maybe over-strict; a lone pine works anywhere). Duration is a guess. |
+| seg_sunset | **sunset_pause_01** → *out* (both options) | 1 | light | goldenhour *(parked)* | — | once_per_hike | **HELD OUT of the shuffle deck** until time-of-day is readable (ENGINE-STATE §8 — the phase helper makes the read side cheap; a small future session, not part of the spine build). Two sunsets per hike is absurd. |
+| seg_rain | **rain_shower_01** → pine_shelter_beat \| (85/15) rain_walk_beat \| rainbow_beat → *out* | 2 | light | clear | wet ~3 stops | every_hike_ok | "Rain starts" while already wet reads wrong → needs clear. Woodland need dropped on review — a lone pine is universal trail furniture. |
 | seg_mist | **mist_valley_01** → mist_wait_beat \| mist_walk_beat → *out* | 2 | light | valley | misty ~2 stops ⚠️ | every_hike_ok | Mist AFTER rain is natural (current trail order) — deliberately no clear requirement. Self-excludes while misty active (see rules). |
 | seg_hollow | **hollow_tree_01** → (90/10) hollow_acorn_beat \| hollow_rare_beat → *out*; opt B → *out* | 1–2 | light | woodland | — | once_per_hike ⚠️ | The same old oak twice would deflate the 10% feather. |
-| seg_pond | **pond_stones_01** → pond_stones_beat_01 → *out*; opt B → *out* | 1–2 | light | water | — | every_hike_ok | ⚠️ Today pond's two options lead to DIFFERENT segments (cairn_topple vs whistle) — see the per-exit successor question in REWIRING. |
-| seg_cairn_topple | **cairn_topple_01** → cairn_restacked_beat → *out*; opt B → *out* | 1–2 | light | any | — | every_hike_ok ⚠️ | Cairns are common trail furniture, but restacking twice a hike may feel repetitive — could argue once_per_hike. Sets `restacked_cairn`. |
+| seg_pond | **pond_stones_01** → pond_stones_beat_01 → *out*; opt B → *out* | 1–2 | light | water | — | every_hike_ok | Today pond's two options lead to DIFFERENT segments (cairn_topple vs whistle); under the v1 single-successor decision both exits converge — see REWIRING NOTES. |
+| seg_cairn_topple | **cairn_topple_01** → cairn_restacked_beat → *out*; opt B → *out* | 1–2 | light | any | — | once_per_hike | Repetition of a named restacking reads as a chore loop — once per hike (reviewed). Sets `restacked_cairn`. |
 | seg_whistle | **whistle_valley_01** → (95/5) echo_beat \| echo_rare_beat → *out*; opt B → *out* | 1–2 | light | valley | — | once_per_hike ⚠️ | The 5% "one note extra" mystery shouldn't be farmable within a hike. |
 | seg_marker | **marker_read_01** → marker_read_beat_01 → *out*; opt B → *out* | 1–2 | light | any | — | once_per_hike ⚠️ | Hint/payoff pair (prose is a promise). The payoff names "Old Miller's Track" — a second identical marker breaks it. |
 | seg_bothy | **bothy_door_01** → bothy_beat → *out*; opt B → *out* | 1–2 | medium ⚠️ | open ⚠️ | — | once_per_hike | Stone shelter reads as moor/hill country. Medium for character density, not stakes ⚠️. Sets `signed_bothy` (guestbook payoff parked). |
 | seg_log_rest | **log_rest_01** → *out* (both options) | 1 | medium | woodland ⚠️ | — | every_hike_ok | The resource-management stop (only `requires` gate in the file). Mossy log suggests damp woods ⚠️. |
 | seg_dog | **dog_stile_01** → dog_along_beat \| dog_home_beat → *out* | 2 | heavy ⚠️ | farmland | — | once_per_hike | Heavy by emotional size, zero stakes ⚠️ — the strongest character moment in the deck; per the brief, once per hike. |
-| seg_stars | **stars_clear_01** → stars_beat → *out*; opt B → *out* | 1–2 | medium ⚠️ | night ⚠️ *(parked)*, clear | — | once_per_hike | Truly needs night + clear sky; both parked until time-of-day exists. Future home of the shooting-star roll (NOTES.md). Late-hike placement suggested (see SKELETON) ⚠️. |
-| seg_gate_ending | **gate_01** → trail_end_01 *(ENDING — terminal)* | 2 | heavy | any ⚠️ | — | skeleton: exactly once, last | **The ending approach.** Gate is farmland furniture but demanding `farmland` would constrain every hike's final biome ⚠️. No exits — trail_end_01 resets to `start`. |
+| seg_stars | **stars_clear_01** → stars_beat → *out*; opt B → *out* | 1–2 | medium ⚠️ | night *(parked)*, clear | — | once_per_hike | **HELD OUT of the shuffle deck** until time-of-day is readable; keeps its reserved skeleton closing slot (see SKELETON). Future home of the shooting-star roll (NOTES.md). |
+| seg_gate_ending | **gate_01** → trail_end_01 *(ENDING — terminal)* | 2 | heavy | any *(confirmed)* | — | skeleton: exactly once, last | **The ending approach.** Needs `any` confirmed on review — the final setting must not be constrained. No exits — trail_end_01 resets to `start`. |
 
 **Count reconciliation:** 3+2+2+2+4+1+2+1+4+3+3+2+2+3+2+2+1+3+2+2 =
 **46 member nodes = 46 nodes in CONTENT-INVENTORY.md.** Every node in
@@ -66,25 +69,26 @@ exactly one segment. `rare` frequency: unused — rarity currently lives
 ## STITCHING RULES (each traceable to a tag)
 
 1. **Setting gate** (`needs` setting tags): a segment may only be dealt
-   where its setting is available; `any` goes anywhere. Requires the
-   stitcher-owned virtual setting state proposed in the header ⚠️.
+   where its setting is available; `any` goes anywhere. Uses the
+   stitcher-owned virtual setting state locked in the header.
 2. **Wet blocks clear-needers** (`sets: wet` + `needs: clear`): while
    wet is active (~3 stops after seg_rain), seg_rain and seg_stars may
    not start. Mist is deliberately NOT blocked by wet.
 3. **Self-exclusion** (`sets`): a segment may not be dealt while the
    state it sets is still active (no mist rolling in during mist).
-4. **Parked sky states** (`goldenhour`, `night` + ENGINE-STATE §8):
-   seg_sunset and seg_stars can't have their needs honored until the
-   day-wash phase is readable. Until then: either hold them out of the
-   deck or accept the incoherence the current game already has ⚠️
-   (human call).
+4. **Parked sky states** (`goldenhour`, `night` + ENGINE-STATE §8) —
+   **resolved: seg_sunset and seg_stars are HELD OUT of the shuffle
+   deck** until the day-wash phase is readable (the phase helper makes
+   the read side cheap — a small future session, not part of the spine
+   build). seg_stars keeps its reserved skeleton closing slot.
 5. **No two heavies adjacent** (`weight`): heavy segments (seg_dog,
    seg_gate_ending) never touch; per GAME-DESIGN's interleaving, prefer
    ≥1 light segment between any two medium-or-heavier.
-6. **Frequency** (`frequency`): once_per_hike segments appear at most
-   once per trail; every_hike_ok segments may repeat but not
-   back-to-back ⚠️ (the "not back-to-back" half is proposed semantics,
-   not yet a tag — flagging rather than inventing silently).
+6. **Frequency** (`frequency`) — adopted semantics: once_per_hike
+   segments appear at most once per trail; every_hike_ok segments never
+   deal back-to-back, and the dealer applies a recency penalty —
+   weighted against segments seen in the last N deals (N tunable;
+   suggest 5).
 7. **The walking floor stays** (GAME-DESIGN → Timing; ENGINE-STATE §3):
    between segments the stitcher must leave the normal 30–90 s gap
    roll alone; `gapM` fast-arrivals are internal to segments only.
@@ -123,32 +127,34 @@ spine lands:
 - seg_stars: opt B next, stars_beat.next (→ gate)
 - seg_gate_ending: none (terminal)
 
-⚠️ **Open design question — one successor per segment, or per exit?**
-Today seg_pond's two options reach *different* segments (cairn_topple
-vs whistle) — the only place an option changes your downstream future.
-A v1 stitcher with a single successor per segment collapses that (both
-exits → same next segment); per-exit successors preserve it at real
-complexity cost. Recommendation: v1 single-successor, accept the loss,
-revisit when a segment is authored whose whole point is divergent
-futures. Pending review.
+**Resolved — v1 is single-successor per segment:** all of a segment's
+exits point at the same successor's entry. Today's one divergence
+(seg_pond → cairn_topple vs whistle) collapses under this model —
+accepted. **Revisit trigger:** build per-exit successors when a segment
+is authored whose point is divergent futures (e.g. a future hike-length
+fork).
 
 ## SKELETON (placeholder for a design conversation)
 
 Preserve an authored arc around a shuffled middle: a hike should open
 gently, wander through the deck, and close deliberately — GAME-DESIGN's
-"compose the rhythm" applied at segment scale.
+"compose the rhythm" applied at segment scale. The middle's deal count
+is the duration dial: small deal = short hike, large = long; a future
+navigation choice can add deals mid-hike.
 
 - **Opening (fixed):** seg_butterfly — a soft, zero-stakes hello; it's
   already the trail's `start`.
 - **Early structural beat (fixed, position 2–3):** seg_fork_vista ⚠️ —
   the fork feels like it belongs near the top of a hike; keeping it in
   the skeleton also sidesteps its converging-exits awkwardness for now.
-- **Middle (shuffled):** everything else — 16 segments dealt against
-  the STITCHING RULES to a target length (suggest ~8–14 middle stops,
-  matching today's 24–36-stop trail ⚠️ tune by feel).
-- **Closing approach (fixed, last-before-ending slot):** seg_stars when
-  night exists ⚠️ (a sky full of stars is a natural wind-down) — until
-  then leave the slot empty.
+- **Middle (shuffled):** everything else — 16 segments, 15 while
+  seg_sunset is held out (rule 4) — dealt against the STITCHING RULES
+  to a target length (suggest ~8–14 middle stops, matching today's
+  24–36-stop trail ⚠️ tune by feel).
+- **Closing approach (fixed, reserved):** seg_stars — held out until
+  time-of-day is readable, then it fills the last-before-ending slot
+  (a sky full of stars is a natural wind-down); until then the slot
+  stays empty.
 - **Ending (fixed, always last):** seg_gate_ending.
 
 ## APPENDIX — interrupt stops (not segments)
