@@ -60,43 +60,56 @@ the end of BUILD-SESSIONS.md.
 
 ## SECTION A — WOODLAND (the home setting)
 
-**Decision required at A1, before generating**: the current scenery is
-grayscale bands recolored by `BIOME_PALETTES` multiply-tints (a tint
-can only darken — Session 9 scar). Real painted layers can't be tinted
-the same way. Choose: (a) keep layers near-grayscale/tintable, or
-(b) per-setting painted layer sets — which effectively pulls the
-"virtual setting drives scenery" park (NOTES.md) forward, since painted
-woodland art cycling on walked meters would clash with dealt water
-segments. Recommendation: decide (b) and wire setting→scenery when
-Section D starts; woodland-only art works fine either way until then.
+**A1 decision: RESOLVED (b), 11 Jul** — per-setting painted layer
+sets; the multiply-tint is retired (neutralized in code with a
+TODO(parked → Section D) at `updateBiomeTint`). Setting→scenery wiring
+pulls forward at Section D.
 
-- [~] **A1**: sky band — background color + the sparse cloud strip
-  (360×180, transparency, clouds duplicated across the wrap point).
-- [~] **A2**: far layer — distant treeline/ridge silhouette, 360×120
-  **tileable strip** ⚠️ seam gotcha: must loop edge-to-edge
-  (ART-STYLE); fallback: sparse silhouettes on transparency.
-- [~] **A3**: mid layer — nearer treeline/undergrowth, 360×140
-  tileable ⚠️ same seam gotcha.
-- [~] **A4**: foreground path — dirt, grass lip, pebbles, tufts,
-  360×180 tileable ⚠️ seam gotcha; this band's motion sells the
-  walking, so keep texture detail that reads at 70 px/s.
-- [~] **A4.5**: near-foreground overlay — sparse transparency strip
-  (360×60) of tall grass tufts / the odd fern at FULL foreground
-  treatment, wired as a fifth parallax band IN FRONT of the hiker
-  (depth 12, ~1.3× path speed). Sparse enough that she stays visible
-  ~85%+ of the time — it brushes past her, never curtains her.
-  *(Added at stage-1 iteration 2 — the scene read flat without a
-  plane in front of the hiker.)*
-- [ ] **A5**: deer — trailside/journal sprite, ~28×28 (journal slot
+**¾ RECOMPOSITION (11 Jul)** — the side-on band spec below was
+superseded mid-section: the scene is now a shallow ¾ view (ART-BIBLE
+§8; ENGINE-STATE §8b): sky / far hills / horizon treeline / ONE ground
+plane with a worn trail at Wanda's row and planted, row-depth-sorted
+props. **Stage M (composition mock, zero generations) is ~80%
+approved; Stage N (real art against the approved mock) has NOT
+started.** The scene currently runs on mock and recovered-placeholder
+art wherever unmarked below.
+
+- [~] **A1**: sky — background color (`#e9edfd`, matched to the far
+  hills' sky tone) + the sparse cloud strip (360×180 on transparency,
+  every cloud near the right edge duplicated one tile-width left).
+  *Art is real (3 generations, composed); status closes with the
+  composition sign-off.*
+- [~] **A2**: far hills — 360×120 tileable ⚠️, cool silhouettes rising
+  to the canvas top, haze bands, sky flood-keyed to transparency.
+  *Art is real (iteration 2); Stage N regenerates only if it reads
+  stretched in the new composition.*
+- [~] **A3**: horizon treeline — 360×100, undulating canopy with dips
+  and an undulating shadow-seated base that sits ON the meadow;
+  tileable ⚠️. *Currently processed generated art (displaced/seated
+  from the mid-strip generation); Stage N decides regenerate vs keep.*
+- [ ] **A4**: **the ground-plane tile** — 360×450, grass receding to
+  the horizon + the worn trail strip at Wanda's row, tileable in x ⚠️,
+  texture that reads at 70 px/s without shimmer. **CODE-PAINTED MOCK
+  today; the Stage N headline item.**
+- [ ] **A5**: hero trees — 2–3 variants planted near the trail rows,
+  full canopy clusters, warm trunks (ART-BIBLE §§3–5 at on-plane
+  treatment). *Mock: the recovered iteration-1 trees.*
+- [ ] **A6**: distant-tree variants — small canopies for the upper
+  plane rows (scale-by-row: higher = further = smaller sprite).
+  *Mock: 2:1 NN downscales — a pixel-density violation tolerated ONLY
+  as mock; Stage N generates true small sprites.*
+- *(the old A4.5 near-foreground overlay band is SUPERSEDED — its
+  brush-past role is played by props planted below the trail row)*
+- [ ] **A7**: deer — trailside/journal sprite, ~28×28 (journal slot
   `deer` exists; trailside spawning is future content).
-- [ ] **A6**: a small bird — ambient critter, ~16×16, 2-frame flap †
+- [ ] **A8**: a small bird — ambient critter, ~16×16, 2-frame flap †
   (no ambient-critter spawner yet — the GAME-DESIGN "fake-outs" layer;
   park the wiring note in SIDE QUESTS when this lands).
-- [ ] **A7**: the old oak with the hollow — landmark for
+- [ ] **A9**: the old oak with the hollow — landmark for
   hollow_tree_01, ~40×56 (currently signpost fallback).
-- [ ] **A8**: the mossy log — landmark for log_rest_01, ~40×20
+- [ ] **A10**: the mossy log — landmark for log_rest_01, ~40×20
   (currently signpost fallback).
-- [ ] **A9**: the hand-painted sign — landmark for painted_sign_01,
+- [ ] **A11**: the hand-painted sign — landmark for painted_sign_01,
   ~30×40 (currently signpost fallback).
 
 ## SECTION B — THE EVERY-HIKE CAST
@@ -233,12 +246,12 @@ Every checklist category maps into the queue: hiker → G1 · biome
 backgrounds → A/D/E/F (four settings of layers, **not six biomes** —
 snow/coast/alpine/meadow/wetland deliberately dropped until content
 earns them; the yeti defers with snow, its journal icon waits in G) ·
-critters & objects → A5–A6, B6–B9, D6, E6, F7 · decision landmarks →
-A7–A9, B1–B5, D5, F5–F6, F8 · endpoint set-pieces → B10, D8, E7, F9
+critters & objects → A7–A8, B6–B9, D6, E6, F7 · decision landmarks →
+A9–A11, B1–B5, D5, F5–F6, F8 · endpoint set-pieces → B10, D8, E7, F9
 (4 of the checklist's 6–12; the rest are dessert) · UI + campfire →
 C1–C6. Every landmark texture the live content references (signpost,
 cairn, stream + the null→signpost fallback) appears exactly once; all
-three journal creatures are placed (fox B7, deer A5, yeti G); the
+three journal creatures are placed (fox B7, deer A7, yeti G); the
 MVP-subset list in ASSET-CHECKLIST is fully covered by GATE 1 +
 Sections A–C + B10. The checklist's lazy-load-per-biome note stays
 parked in NOTES.md until real PNGs exist.
@@ -348,11 +361,34 @@ already earned during the placeholder build:
 - **REQUIRED prompt language for every setting's layer set (D/E/F
   inherit this scar)**: (1) the far layer needs PRESENCE — "varied
   heights, some rising near the TOP edge of the canvas" — or it comes
-  back as a low strip that hides behind the mid layer and the scene
-  reads flat; (2) the mid layer needs SILHOUETTE VARIETY — "strongly
-  undulating canopy line, clusters at different heights, occasional
-  emergent, one or two deep dips, NOT an even row of same-height
-  trees, same scale throughout (vary height, never apparent
-  distance)"; (3) a near-foreground overlay strip in front of the
-  hiker is part of every setting's set (A4.5 pattern: sparse full-
-  treatment elements, ~1.3× path speed, depth 12).
+  back as a low strip that hides behind nearer layers and the scene
+  reads flat; (2) SILHOUETTE VARIETY applies to EVERY organic layer —
+  "strongly undulating canopy line, clusters at different heights,
+  occasional emergent, one or two deep dips, NOT an even row of
+  same-height trees, same scale throughout (vary height, never
+  apparent distance)".
+- **The ¾ recomposition (11 Jul)** — the side-on band stack read flat
+  ("side-on") no matter how good the layers were; the fix was
+  compositional, not painterly: a shallow ¾ ground plane (GBA
+  Mana-era convention) with planted, row-depth-sorted props. Wanda
+  and all critters stay side-view sprites and read fine on the plane.
+  D/E/F build their sets on this template from the start: sky + far
+  layer + horizon layer + ground-plane tile + planted props.
+- **Horizon seating**: a treeline meeting a ground plane needs an
+  UNDULATING base edge plus a soft two-tone shadow band drawn ON the
+  meadow (dark contact line fading to grass), and the treeline band
+  must draw AFTER the plane. A straight cut reads as a floating hedge.
+- **Painted skies are also invisible WALLS**: an opaque sky region
+  inside a layer texture silently clips anything meant to drift
+  behind that layer (the clouds vanished mid-shape behind the far
+  hills' painted sky). Flood-key skies FROM THE TOP EDGE — interior
+  haze bands stay safe — rather than color-keying globally.
+- **Halo scrub**: keyed canopies keep a fringe of near-white edge
+  pixels; kill light pixels that touch transparency (two passes).
+- **Cloud strips**: every element near the right edge must be drawn
+  again one tile-width left (the old placeholder rule survives
+  verbatim in the composed strip).
+- **MOCK-BEFORE-GENERATE is the standing pattern for D/E/F**: build
+  the composition from existing/placeholder art first (zero
+  generations), get it approved on the phone, THEN spend credits
+  against the locked composition. Stage M/N naming per section.

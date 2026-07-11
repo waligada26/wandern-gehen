@@ -27,8 +27,16 @@ deck has only 7 repeatable segments" — the authoring signal, not a bug.
   screen/overlay (ART-BIBLE §7 NOTE).
 - **Virtual setting drives scenery** — the locked end-state: the
   spine's setting replaces the meter-based biome palette cycle as the
-  one authority on where you are. ART-QUEUE's A1 decision point;
-  needed by Section D at the latest.
+  one authority on where you are. **A1 decision resolved (b), 11 Jul:
+  per-setting painted sets; the multiply-tint is retired** (no-op
+  `updateBiomeTint` carries the TODO(parked → Section D)). With the ¾
+  recomposition, "a setting's set" = sky + far layer + horizon layer
+  + ground-plane tile + planted-prop table — swap/crossfade THAT
+  bundle on the spine's setting. Pulls forward at Section D.
+- **TODO(parked) comments in code after the art chapter's day 1**:
+  `Game.js updateBiomeTint` (setting→scenery, above) and the
+  pre-existing `spine.js pickDeal` (seg_stars' reserved closing slot,
+  time-of-day park). That is the complete list.
 - **Creature journal biome tag** — meetCreature reads the upcoming
   node's `biome`; move to the spine's virtual setting when it becomes
   the authority.

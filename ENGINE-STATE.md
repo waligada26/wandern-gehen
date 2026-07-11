@@ -5,17 +5,19 @@ A living reality document. The design docs (GAME-DESIGN.md etc.) describe
 this file wins. Re-read at the start of a session; update at the end of any
 session that changes engine behavior, schema, save format, or validation.
 
-Last verified against the code: 11 July 2026, mid-Section A. The
-dealer (rules 1–7 + skeleton) is unchanged and live. Art: **the hiker
-and the woodland parallax set are real** (G1 locked; A1–A4 painted
-layers + the new A4.5 near-foreground overlay band); props/landmarks/
-UI still placeholder. Engine changes since the dealer commit: painted
-layers loaded in preload (painters removed), biome multiply-tint
-neutralized (§8), the day-wash render bug fixed (§8), a fifth parallax
-band in front of the hiker (§1), and the service-worker caching
-strategy rewritten (§1, main.js row). A1 decision resolved as (b):
-per-setting painted layer sets; setting→scenery wiring parked to
-Section D. Line numbers drift — trust the named function.
+Last verified against the code: 11 July 2026, art-chapter close-out.
+The dealer (rules 1–7 + skeleton) is unchanged and live. **The scene
+is now a shallow ¾ view** (Stage M of the Section A recomposition —
+see §8b): sky / far hills / horizon treeline / one ground plane with
+a planted-prop system. Art status: Wanda is real (G1 locked); clouds
+and far hills are real generations; the horizon treeline is processed
+generated art; **the ground plane and all props are mock/recovered
+placeholders pending Stage N**. Other engine changes this chapter:
+biome multiply-tint neutralized (§8), day-wash render bug fixed (§8),
+service-worker caching strategy rewritten (§1, main.js row). A1
+decision resolved as (b): per-setting painted sets; setting→scenery
+wiring parked to Section D. Line numbers drift — trust the named
+function.
 
 ## 1. MODULE MAP
 
@@ -24,7 +26,7 @@ Section D. Line numbers drift — trust the named function.
 | `src/main.js` | DOM boot, service-worker registration (skipped on dev server). `public/sw.js` strategy: network-first pages · cache-first ONLY Vite-hashed bundles · stale-while-revalidate for un-hashed assets (`cache:'no-cache'` refresh, awaited puts) — a deploy reaches clients one launch later. Cache name `wandern-gehen-v2` |
 | `src/game/main.js` | Phaser config: 360×640 portrait, `pixelArt: true`, FIT scaling, scene order `[Camp, Game]` |
 | `src/game/scenes/Camp.js` | The campfire scene. Runs first; no save → hands straight to Game |
-| `src/game/scenes/Game.js` | World, distance clock, stops, cards, lingers, rare encounters, journal UI, day/night wash, **5-band parallax** (clouds/far/mid/path + the A4.5 near-foreground overlay at depth 12, in FRONT of the hiker, 1.3× path speed; bands OVERLAP per the anchoring comment above `LAYERS`), prop placeholder painters (scenery painters removed) |
+| `src/game/scenes/Game.js` | World (¾-view scene — §8b), distance clock, stops, cards, lingers, rare encounters, journal UI, day/night wash, planted-prop system, prop placeholder painters (scenery painters removed except `paintPlane`, the mock ground plane) |
 | `src/game/content.json` | The content data: `start`, `creatures`, `nodes`, **`segments`** |
 | `src/game/content-load.js` | **The load stage**: imports content.json, validates once, exports it. Game/Camp import from HERE, never the raw JSON |
 | `src/game/content-validate.js` | All content + segment guardrails (§7) |
@@ -215,6 +217,43 @@ footsteps exist; content cannot request sounds. Blend-mode reality
 Known cosmetic quirk: rapid automated tapping can outrun Tone's chime
 scheduler ("start time must be strictly greater…" — one chime skipped,
 no game effect).
+
+## 8b. SCENE COMPOSITION (¾ VIEW — Stage M mock, 11 Jul 2026)
+
+The side-on band layout is GONE (the dirt cutaway with it). The scene
+is a shallow ¾ view (ART-BIBLE §8): a visible ground plane recedes
+upward from the bottom of the screen to a horizon.
+
+**Bands** (`LAYERS`, draw order = array order; beyond-horizon layers
+keep parallax speeds, the plane and everything planted on it move at
+ONE speed):
+
+| Band | Top..Bottom | Speed | Notes |
+|---|---|---|---|
+| clouds | 26..206 | 6 | sparse strip; wrap-duplication rule |
+| far hills | 70..190 | 14 | sky flood-keyed to transparency (clouds pass behind real silhouettes, not a painted sky wall); bg color `#e9edfd` = its old sky tone |
+| ground plane | 190..640 | 70 | `HORIZON`=190; one big tileable band; worn trail strip at Wanda's row (GROUND_Y 478); currently `paintPlane()` MOCK |
+| horizon treeline | 120..220 | 32 | draws AFTER the plane so its undulating shadow base sits ON the meadow |
+
+`PATH_SPEED` is looked up by key (`'plane'`), not index.
+
+**Planted props** (`PROP_TYPES`, `spawnProp`, `propDepth`): spawn on
+walked meters (avg-of-two-rolls gap), at a random row inside a
+per-type band, ride the plane at plane speed, culled off the left
+edge. **Scale-by-row**: higher rows use smaller source sprites (the
+mock's distant trees are 2:1 NN downscales — a pixel-density
+violation tolerated ONLY as mock). **Depth = row** (painter's
+algorithm, fractional Phaser depths): rows above the trail →
+`5 + (y−HORIZON)/1000` (behind Wanda at 10); the trail row and below
+→ `12 + (y−HORIZON)/1000` (in front of her and the worn hat 11,
+beneath the day-wash 15). **Landmarks route through propDepth too**
+(spawn on the trail row exactly as before — arrival/card flow
+verified unchanged). Specials (hat/fox) keep flat depth 6.
+
+**Props are NOT persisted** — decorative only; a reload replants.
+Day-wash and linger tints are full-screen rectangles and cover the
+new layout unchanged. Prop spawn randomness is Math.random like the
+other scene dice (§6) — not part of the dealer's injectable rng.
 
 ## 9. KNOWN HAZARDS & QUIRKS
 
