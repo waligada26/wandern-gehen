@@ -5,11 +5,14 @@ A living reality document. The design docs (GAME-DESIGN.md etc.) describe
 this file wins. Re-read at the start of a session; update at the end of any
 session that changes engine behavior, schema, save format, or validation.
 
-Last verified against the code: 11 July 2026, chapter-close handover.
-Code is unchanged since the dealer commit (`f17e597`) — the dealer
-(rules 1–7 + skeleton) is live and every hike is a shuffled deal; all
-art is placeholder. Next chapter: the art pass, from ART-QUEUE.md
-GATE 0. Line numbers drift — trust the named function over the number.
+Last verified against the code: 11 July 2026, post-G1 lock. Engine
+code is unchanged since the dealer commit (`f17e597`) — the dealer
+(rules 1–7 + skeleton) is live and every hike is a shuffled deal.
+Art: **the hiker is real** (G1 locked 11 Jul — a pure PNG swap in
+`public/assets/`, zero engine change); everything else is placeholder.
+Art-pass position: ART-QUEUE.md Section A (the A1 tint-vs-painted
+decision opens it). Line numbers drift — trust the named function
+over the number.
 
 ## 1. MODULE MAP
 

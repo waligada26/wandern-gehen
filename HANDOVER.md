@@ -57,11 +57,11 @@ tag/spec authority), NOTES.md (parked backlog).
 1. **Phone-verify the whole backlog above** — especially two
    back-to-back hikes for variety + calm.
 2. **The ART PASS chapter is open** — work ART-QUEUE.md strictly top
-   to bottom. GATE 0 (Pixel Lab MCP smoke test) PASSED 11 Jul; next
-   is GATE 1 (the hiker / style lock, against ART-BIBLE.md). Engine
-   and content parks wait in NOTES.md; the setting→scenery park gets
-   pulled forward by ART-QUEUE's A1 decision at the latest by
-   Section D.
+   to bottom. GATE 0 passed and GATE 1 LOCKED 11 Jul (Wanda = real
+   art, reference in `art-reference/`, ART-BIBLE §2 ramps finalized).
+   Next: Section A (woodland) — which OPENS with the A1
+   tint-vs-painted-layers decision, to be discussed before any layer
+   art is generated. Engine and content parks wait in NOTES.md.
 3. Music remains the parallel track (Jimmy composes stems → Tone.js
    replaces the placeholder synths).
 
@@ -71,8 +71,8 @@ tag/spec authority), NOTES.md (parked backlog).
 - Stray repo `caniplantit42/wandern-gehen` still awaiting manual
   deletion in the browser. Never touch that account.
 - The art chapter is OPEN (the old "parked until proven fun" gate is
-  behind us): ART-QUEUE GATE 0 passed 11 Jul 2026 — Pixel Lab MCP →
-  PNG → Phaser verified end-to-end. Next queue line: GATE 1 (the
-  hiker), on Jimmy's word.
+  behind us): GATE 0 passed and GATE 1 locked 11 Jul 2026 — Wanda is
+  real art in the deployed build. Next queue line: Section A, opening
+  with the A1 decision (discuss before generating).
 - Save compatibility: all of today's fields (flags, spine) ride
   reader-side defaults — old saves load fine; SAVE_VERSION is still 1.
