@@ -70,16 +70,23 @@ woodland art cycling on walked meters would clash with dealt water
 segments. Recommendation: decide (b) and wire setting→scenery when
 Section D starts; woodland-only art works fine either way until then.
 
-- [ ] **A1**: sky band — background color + the sparse cloud strip
+- [~] **A1**: sky band — background color + the sparse cloud strip
   (360×180, transparency, clouds duplicated across the wrap point).
-- [ ] **A2**: far layer — distant treeline/ridge silhouette, 360×120
+- [~] **A2**: far layer — distant treeline/ridge silhouette, 360×120
   **tileable strip** ⚠️ seam gotcha: must loop edge-to-edge
   (ART-STYLE); fallback: sparse silhouettes on transparency.
-- [ ] **A3**: mid layer — nearer treeline/undergrowth, 360×140
+- [~] **A3**: mid layer — nearer treeline/undergrowth, 360×140
   tileable ⚠️ same seam gotcha.
-- [ ] **A4**: foreground path — dirt, grass lip, pebbles, tufts,
+- [~] **A4**: foreground path — dirt, grass lip, pebbles, tufts,
   360×180 tileable ⚠️ seam gotcha; this band's motion sells the
   walking, so keep texture detail that reads at 70 px/s.
+- [~] **A4.5**: near-foreground overlay — sparse transparency strip
+  (360×60) of tall grass tufts / the odd fern at FULL foreground
+  treatment, wired as a fifth parallax band IN FRONT of the hiker
+  (depth 12, ~1.3× path speed). Sparse enough that she stays visible
+  ~85%+ of the time — it brushes past her, never curtains her.
+  *(Added at stage-1 iteration 2 — the scene read flat without a
+  plane in front of the hiker.)*
 - [ ] **A5**: deer — trailside/journal sprite, ~28×28 (journal slot
   `deer` exists; trailside spawning is future content).
 - [ ] **A6**: a small bird — ambient critter, ~16×16, 2-frame flap †
@@ -338,3 +345,14 @@ already earned during the placeholder build:
   treeline an opaque 2-tone sky with cloud blobs. They're always a
   couple of flat tones: sample and chroma-key, then verify per-row
   opacity before shipping.
+- **REQUIRED prompt language for every setting's layer set (D/E/F
+  inherit this scar)**: (1) the far layer needs PRESENCE — "varied
+  heights, some rising near the TOP edge of the canvas" — or it comes
+  back as a low strip that hides behind the mid layer and the scene
+  reads flat; (2) the mid layer needs SILHOUETTE VARIETY — "strongly
+  undulating canopy line, clusters at different heights, occasional
+  emergent, one or two deep dips, NOT an even row of same-height
+  trees, same scale throughout (vary height, never apparent
+  distance)"; (3) a near-foreground overlay strip in front of the
+  hiker is part of every setting's set (A4.5 pattern: sparse full-
+  treatment elements, ~1.3× path speed, depth 12).

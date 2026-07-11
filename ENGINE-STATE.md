@@ -5,23 +5,26 @@ A living reality document. The design docs (GAME-DESIGN.md etc.) describe
 this file wins. Re-read at the start of a session; update at the end of any
 session that changes engine behavior, schema, save format, or validation.
 
-Last verified against the code: 11 July 2026, post-G1 lock. Engine
-code is unchanged since the dealer commit (`f17e597`) — the dealer
-(rules 1–7 + skeleton) is live and every hike is a shuffled deal.
-Art: **the hiker is real** (G1 locked 11 Jul — a pure PNG swap in
-`public/assets/`, zero engine change); everything else is placeholder.
-Art-pass position: ART-QUEUE.md Section A (the A1 tint-vs-painted
-decision opens it). Line numbers drift — trust the named function
-over the number.
+Last verified against the code: 11 July 2026, mid-Section A. The
+dealer (rules 1–7 + skeleton) is unchanged and live. Art: **the hiker
+and the woodland parallax set are real** (G1 locked; A1–A4 painted
+layers + the new A4.5 near-foreground overlay band); props/landmarks/
+UI still placeholder. Engine changes since the dealer commit: painted
+layers loaded in preload (painters removed), biome multiply-tint
+neutralized (§8), the day-wash render bug fixed (§8), a fifth parallax
+band in front of the hiker (§1), and the service-worker caching
+strategy rewritten (§1, main.js row). A1 decision resolved as (b):
+per-setting painted layer sets; setting→scenery wiring parked to
+Section D. Line numbers drift — trust the named function.
 
 ## 1. MODULE MAP
 
 | File | Owns |
 |---|---|
-| `src/main.js` | DOM boot, service-worker registration (skipped on dev server) |
+| `src/main.js` | DOM boot, service-worker registration (skipped on dev server). `public/sw.js` strategy: network-first pages · cache-first ONLY Vite-hashed bundles · stale-while-revalidate for un-hashed assets (`cache:'no-cache'` refresh, awaited puts) — a deploy reaches clients one launch later. Cache name `wandern-gehen-v2` |
 | `src/game/main.js` | Phaser config: 360×640 portrait, `pixelArt: true`, FIT scaling, scene order `[Camp, Game]` |
 | `src/game/scenes/Camp.js` | The campfire scene. Runs first; no save → hands straight to Game |
-| `src/game/scenes/Game.js` | World, distance clock, stops, cards, lingers, rare encounters, journal UI, day/night wash, biome tints, placeholder painters |
+| `src/game/scenes/Game.js` | World, distance clock, stops, cards, lingers, rare encounters, journal UI, day/night wash, **5-band parallax** (clouds/far/mid/path + the A4.5 near-foreground overlay at depth 12, in FRONT of the hiker, 1.3× path speed; bands OVERLAP per the anchoring comment above `LAYERS`), prop placeholder painters (scenery painters removed) |
 | `src/game/content.json` | The content data: `start`, `creatures`, `nodes`, **`segments`** |
 | `src/game/content-load.js` | **The load stage**: imports content.json, validates once, exports it. Game/Camp import from HERE, never the raw JSON |
 | `src/game/content-validate.js` | All content + segment guardrails (§7) |
@@ -191,17 +194,27 @@ Not validated: flag-name typos, linger-value sanity.
 
 ## 8. AUDIO & TIME-OF-DAY
 
-Unchanged (see prior entries): synthesized one-shots + shimmer +
-footsteps exist; content cannot request sounds; time-of-day and scenery
-biome are distance-driven, unreadable and unwritable by content or
-engine decisions. Blend-mode reality (matters for the art pass /
-ART-QUEUE A1): the scenery **biome palettes are multiply tints**
-(`setTint` — can only darken, hence white/gray base art); the
-**day-wash and linger tints are alpha-blended rectangles** (can mute
-and shift, but no additive glow — a true golden-hour brightening needs
-a screen/overlay blend, parked with the time-of-day session). Known cosmetic quirk: rapid automated tapping can
-outrun Tone's chime scheduler ("start time must be strictly greater…" —
-one chime skipped, no game effect).
+Audio unchanged (see prior entries): synthesized one-shots + shimmer +
+footsteps exist; content cannot request sounds. Blend-mode reality
+(updated mid-Section A):
+
+- **The biome multiply-tint is RETIRED** (A1 decision (b)): painted
+  layers can't be multiply-tinted, so `updateBiomeTint` is a no-op
+  carrying the TODO(parked → Section D) — scenery will switch on the
+  spine's virtual setting with crossfades instead of walked meters.
+  `BIOME_PALETTES` remains in the file as reference only.
+- **The day-wash WORKS now** — it had never rendered (Session 9 bug:
+  rectangle created at object alpha 0 while updateDayWash drove only
+  the fill alpha; product = invisible). Fixed in Section A; golden
+  hour and dusk visibly tint, ceiling `DAY_WASH_MAX_ALPHA` 0.35.
+- Day-wash and linger tints are alpha-blended rectangles (mute and
+  shift, no additive glow — a true golden-hour brightening still
+  needs a screen/overlay blend, parked with the time-of-day session).
+- Time-of-day remains distance-driven and unreadable by content.
+
+Known cosmetic quirk: rapid automated tapping can outrun Tone's chime
+scheduler ("start time must be strictly greater…" — one chime skipped,
+no game effect).
 
 ## 9. KNOWN HAZARDS & QUIRKS
 

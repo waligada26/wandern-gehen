@@ -22,7 +22,11 @@ const LAYERS = [
     //  far's painted haze top dissolves into the matching background sky.
     { key: 'far',    top: 340, height: 120, speed: 14 },
     { key: 'mid',    top: 350, height: 140, speed: 32 },
-    { key: 'path',   top: 460, height: 180, speed: 70 }
+    { key: 'path',   top: 460, height: 180, speed: 70 },
+    //  A4.5 near-foreground overlay: sparse tufts/ferns that brush PAST
+    //  the hiker — the only band in front of her. depth 12: above Wanda
+    //  (10) and the worn hat (11), below the day-wash (15) so it tints.
+    { key: 'overlay', top: 462, height: 60, speed: 91, depth: 12 }
 ];
 
 //  Every scenery texture is TEX_W wide and tiles seamlessly. The painted
@@ -145,6 +149,7 @@ export class Game extends Scene
         this.load.image('far', 'assets/wood-far.png');
         this.load.image('mid', 'assets/wood-mid.png');
         this.load.image('path', 'assets/wood-path.png');
+        this.load.image('overlay', 'assets/wood-overlay.png');
     }
 
     create ()
@@ -161,8 +166,8 @@ export class Game extends Scene
         //  left; when the pair has moved one full tile, it snaps back — the
         //  copies are identical, so the snap (and the seam) is invisible.
         this.layers = LAYERS.map(cfg => ({
-            a: this.add.image(0, cfg.top, cfg.key).setOrigin(0, 0),
-            b: this.add.image(TEX_W, cfg.top, cfg.key).setOrigin(0, 0),
+            a: this.add.image(0, cfg.top, cfg.key).setOrigin(0, 0).setDepth(cfg.depth || 0),
+            b: this.add.image(TEX_W, cfg.top, cfg.key).setOrigin(0, 0).setDepth(cfg.depth || 0),
             speed: cfg.speed,
             offset: 0
         }));

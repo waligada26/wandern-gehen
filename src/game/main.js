@@ -11,7 +11,7 @@ const config = {
     parent: 'game-container',
     //  Matches the top row of the far woodland layer exactly, so the
     //  band's upper edge dissolves into the sky (Section A).
-    backgroundColor: '#e8edfc',
+    backgroundColor: '#e9edfd',
     pixelArt: true,
     scale: {
         mode: Scale.FIT,
