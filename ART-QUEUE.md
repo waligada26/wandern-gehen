@@ -36,8 +36,8 @@ the end of BUILD-SESSIONS.md.
   Phaser on the dev server. Any subject; it will be deleted.
   **Nothing below starts until this passes.**
   *(Passed 11 Jul 2026 — a 64×64 mushroom via `create_map_object`,
-  served and loaded through the same path Wanda's PNGs use; sprite
-  and temp code deleted after verification. See LEARNINGS.)*
+  seen rendering on screen in the dev server by Jimmy; sprite and
+  temp code deleted after verification. See LEARNINGS.)*
 
 ## GATE 1 — STYLE LOCK
 
