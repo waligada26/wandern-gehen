@@ -72,6 +72,11 @@ Build **every** slot on free stand-ins first — solid colored rectangles drawn 
 
 ## Biomes
 
+**SUPERSEDED: art geography is now the dealer's five settings
+(woodland, water, valley, farmland, open) per ART-QUEUE.md and
+SEGMENT-TABLE.md. The list below is the original sketch; snow/coast
+etc. may join later if content earns them.**
+
 Aim for **~6** to start (grow later). Each needs its layer set, a critter palette, and at least one endpoint. Candidate list:
 
 - Forest · Meadow · Alpine/mountains · Coast/beach · River/wetland · Snow
