@@ -5,10 +5,9 @@ A living reality document. The design docs (GAME-DESIGN.md etc.) describe
 this file wins. Re-read at the start of a session; update at the end of any
 session that changes engine behavior, schema, save format, or validation.
 
-Last verified against the code: 11 July 2026, spine build session 1 of 2
-(content-load stage, segments manifest, @exit sentinel, spine.js with a
-FIXED-ORDER dealer stub). The game plays the historical trunk; shuffling
-is session 2. Line numbers drift — trust the named function over the
+Last verified against the code: 11 July 2026, spine build session 2 of 2
+(THE DEALER — stitching rules 1–7 + skeleton live; every hike is now a
+shuffled deal). Line numbers drift — trust the named function over the
 number.
 
 ## 1. MODULE MAP
@@ -22,7 +21,7 @@ number.
 | `src/game/content.json` | The content data: `start`, `creatures`, `nodes`, **`segments`** |
 | `src/game/content-load.js` | **The load stage**: imports content.json, validates once, exports it. Game/Camp import from HERE, never the raw JSON |
 | `src/game/content-validate.js` | All content + segment guardrails (§7) |
-| `src/game/spine.js` | The spine: segment lookup, dealing, per-hike history, world-state timers. **Session 1: fixed-order stub** reproducing the historical trunk. Pure module, Node-testable |
+| `src/game/spine.js` | The spine: segment lookup, **the dealer** (SEGMENT-TABLE rules 1–7 + skeleton), per-hike history, world-state timers, virtual-setting ring. Pure module, Node-testable; rng injectable; guarded `?deal=` dev override |
 | `src/game/save.js` | One localStorage save slot, versioned |
 | `src/game/photos.js` | Polaroids in IndexedDB, Web Share / download fallback |
 | `src/game/audio.js` | Tone.js: synthesized stems, shimmer, one-shots, footsteps, mute |
@@ -57,9 +56,9 @@ effects, beat/ending button labels hardcoded — with one addition:
 }
 ```
 
-`needs`/`sets`/`weight`/`frequency`/`heldOut` are **data only this
-session** — the fixed-order dealer ignores them; session 2's dealer
-consumes them.
+`needs`/`sets`/`weight`/`frequency`/`heldOut` are **live** — the dealer
+enforces all of them. heldOut (sunset, stars) genuinely leaves the
+trail until the time-of-day session.
 
 ## 3. RESOLUTION FLOW
 
@@ -78,11 +77,25 @@ funnel (endLinger and startNewTrail route through it). advanceTo now:
 4. `currentId = id` → `rollNextLandmark()` → `saveNow()` — the deal
    persists atomically with the resolution.
 
-- **Dealer (session 1)**: FIXED_ORDER in spine.js — the historical
-  trunk. Two accepted micro-changes from the v1 single-successor
-  collapse: everyone now walks BOTH cairn_topple and whistle (pond's
-  divergence), and painted_sign (was high-ridge-only) is dealt to
-  everyone. Trail: 20 segments, 26–38 stops.
+- **The dealer** (spine.js `pickDeal`/`drawFromDeck`): each `@exit`
+  deal filters the deck — once_per_hike spent, no back-to-back, heavy
+  adjacency (heavies only ever touch light — bidirectional, includes
+  the ending and the fork slot), setting gate vs the virtual setting,
+  sky gates ("clear" blocked while wet/misty; night/goldenhour
+  undealable until time-of-day), self-exclusion while own `sets` state
+  active — then draws weighted (recency penalty `RECENCY_PENALTY` over
+  last `RECENCY_N`=5 deals; light preferred ×2 after a medium+).
+  **Skeleton**: butterfly opens (= `start`), fork_vista slots at rolled
+  position 2–3 (`forkAt`, saved), middle deals until `targetDeals`
+  (avg of two rolls across 8–14, the duration dial), then the gate
+  ending — with one light buffer first if the previous deal wasn't
+  light. **Exhaustion**: relaxation ladder (drop recency → drop
+  setting → drop back-to-back; NEVER once_per_hike/heldOut/sky/heavy),
+  then the ending deals early — a short hike, never a crash
+  (`console.debug` logs relaxation stages, `console.warn` logs early
+  endings). Virtual setting: shuffled 5-ring advanced every
+  `SETTING_STRIDE`=2 deals, reshuffled per lap — placeholder until it
+  drives scenery.
 - **Spacing**: rule 7 falls out of existing code — internal follow-up
   beats carry `gapM: 10` (fast arrival); segment entries carry no gapM
   → boundaries get the normal 30–90 s roll (÷10 under `?fast`; gapM is
@@ -98,11 +111,13 @@ funnel (endLinger and startNewTrail route through it). advanceTo now:
 Save object: `{ v:1, distanceM, state, currentId, nextLandmarkAtM,
 journal, hatRemainingM, flags, spine }`.
 
-- **`spine`** (added 11 Jul 2026, session 1 — no version bump, reader
-  defaults): `{ history: [segIds], world: { wet, misty }, setting,
-  targetDeals }`. `history` is the full per-hike deal order (used-list +
-  recency + count all derive from it); `targetDeals` is a reserved slot
-  (null until session 2) so the save shape won't change again.
+- **`spine`** (no version bump, reader defaults): `{ history, world:
+  { wet, misty }, setting, targetDeals, settingRing, settingIndex,
+  forkAt }`. `history` is the full per-hike deal order (used-list +
+  recency + count derive from it); `targetDeals` rolls at trail start
+  (pre-dealer saves carry null → rolled lazily on the first deal);
+  ring/index/forkAt persist so a reload never reshuffles mid-hike.
+  Mid-hike reload restores byte-identical deck state (verified).
 - **Current segment is never stored** — derived from `currentId` via the
   manifest (`spine.segmentOf`), so `__wg.currentId` teleports self-heal
   (verified).
@@ -132,9 +147,12 @@ both-options-gated soft-lock warned at load only.
   `gapM`).
 - `rollForSpecials` — hat/fox dice.
 - `pickNext` — weighted-next rolls at resolve time (4 weighted options).
-- **The dealer adds NO randomness this session** — fixed order. Session 2
-  is where deal randomness arrives.
-- audio.js — melody/shimmer drift only. No seeded RNG anywhere.
+- **spine.js** — the dealer: weighted deck draw, `targetDeals` roll,
+  fork-slot roll (2 vs 3), setting-ring shuffles. All through
+  `this.rng` — **injectable** (constructor opts, default Math.random),
+  so tests run seeded and deterministic. Deal randomness happens at
+  resolve time inside `advanceTo` → persists like everything else.
+- audio.js — melody/shimmer drift only.
 
 ## 7. VALIDATION
 
@@ -157,8 +175,15 @@ nodes must not carry `gapM` (rule 7); vocab enums on
 weight/frequency/needs/sets/skeleton; exactly one skeleton `opening`
 and one `ending`; `start` === the opening segment's entry.
 
-Not validated: flag-name typos, linger-value sanity, deck viability
-(session 2's dealer needs its own exhaustion checks).
+Deck-viability checks (session 2): an always-legal segment must exist
+(setting any + no sky + every_hike_ok) or relaxation may not terminate;
+the ending segment must keep `needs.setting: "any"`; **an intentional
+standing warning fires on every load** — only 7 repeatable
+(every_hike_ok) deck segments vs max targetDeals 14, so long hikes lean
+on repeats. That warning is a content-authoring signal, not a bug; it
+clears when more every_hike_ok segments are written.
+
+Not validated: flag-name typos, linger-value sanity.
 
 ## 8. AUDIO & TIME-OF-DAY
 
@@ -171,17 +196,20 @@ one chime skipped, no game effect).
 
 ## 9. KNOWN HAZARDS & QUIRKS
 
-- **The dealer is a stub.** FIXED_ORDER walks all 20 segments including
-  the heldOut ones (sunset, stars) — heldOut/needs/sets/weight/frequency
-  are inert data until session 2.
 - **`@exit` never survives into `currentId`** (substituted pre-
   assignment, verified) — saves and the spawn check only see node ids.
 - **advanceTo remains the single funnel** — new resolution semantics go
   there and nowhere else; interrupts bypass it by design.
-- **Deck exhaustion will be a crash path in session 2** — "no legal
-  deal" must be handled (relaxation order: recency first, then setting,
-  never once_per_hike) before rules go live; the fixed order can't
-  exhaust.
+- **Deck exhaustion is handled, not crashing**: relaxation ladder, then
+  an early ending (verified on a scarce-deck manifest). With current
+  content the repeatable segments make true exhaustion unreachable —
+  the marathon test (target 100) completes on repeats.
+- **`?deal=seg_a,seg_b`** in the URL forces the first deals (dev-only;
+  the one guarded impurity in spine.js — tests inject `opts.forcedDeals`
+  instead). Composes with `?fast`: `?fast&deal=seg_dog`.
+- **The standing validator warning** (7 repeatable segments < 14) is
+  intentional — see §7. Tests expecting zero warnings must expect
+  exactly this one.
 - **Validator warns, it doesn't fix** (except the effects strip).
 - **`gapM` not `?fast`-scaled**; arrival ≈ gapM/1.4 s + ~3.3 s scroll-in.
 - **SAVE_VERSION bump wipes saves**; add fields with reader defaults
@@ -209,10 +237,12 @@ pointers · 2 heldOut · skeleton roles opening/closing/ending assigned.
 Node census unchanged: 20 choices, 25 beats (24 linger, 1 card),
 1 ending; 4 weighted options; 5 flag options.
 
-**The trail now deals all 20 segments in fixed order** (26–38 stops;
-was 24–36): everyone meets painted_sign, cairn_topple AND whistle —
-the two accepted single-successor micro-changes.
+**Every hike is now a shuffled deal**: butterfly opener → fork at
+position 2–3 → a dealt middle of `targetDeals` 8–14 total deals
+(16-segment deck; sunset/stars held out) → gate ending, with rules 1–7
+enforced. Two consecutive hikes differ in segment order, length, and
+weather — the mirror of session 1's sameness.
 
-References: CONTENT-INVENTORY.md (regenerated 11 Jul 2026 post-spine),
-SEGMENT-TABLE.md v1.1 (the dealer spec for session 2), NOTES.md
-("Parked" sections) for the follow-up backlog.
+References: CONTENT-INVENTORY.md (regenerated 11 Jul 2026 post-dealer),
+SEGMENT-TABLE.md v1.1 (the tag/spec authority; implementation status in
+its header), NOTES.md ("Parked" sections) for the follow-up backlog.

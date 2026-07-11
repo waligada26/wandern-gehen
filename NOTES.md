@@ -63,30 +63,30 @@ future payoffs.
   gapM 10 (7s walk + ~3s landmark scroll-in). If that should feel more
   immediate, drop gapM to ~1–3 (scroll-in sets a ~3s floor).
 
-## Parked from spine build session 1 (11 July 2026)
+## Parked after the dealer landed (11 July 2026, spine session 2)
 
-Session 2 of the spine build — the real dealer, replacing spine.js's
-FIXED_ORDER stub. Everything below has its data already in place
-(segments manifest, save shape, world-timer ticks):
+The dealer (rules 1–7, skeleton, targetDeals, setting ring, exhaustion
+ladder) is DONE — spine.js. Still parked:
 
-- **Stitching rules 1–6** (SEGMENT-TABLE.md): setting gate, wet blocks
-  clear-needers, self-exclusion, held-out sky segments, no-two-heavies,
-  frequency semantics (once_per_hike + no back-to-back + recency
-  penalty, N≈5).
-- **The skeleton**: fixed opener (butterfly), early fork slot, shuffled
-  middle sized by `targetDeals` (the duration dial), reserved stars
-  closing slot, fixed gate ending.
-- **Setting-advance policy** — the virtual setting must rotate or the
-  setting gate starves the deck (deadlock risk noted in recon).
-- **Deck-exhaustion relaxation order** — decide before rules go live:
-  relax recency first, then setting, never once_per_hike; the ending
-  must always stay reachable ("no legal deal" would be a crash).
-- **Creature journal biome tag** — meetCreature reads the upcoming
-  node's `biome`; move it to the spine's virtual setting when that
-  becomes the scenery authority.
-- **Trail-cycling rare farm** — once_per_hike resets per trail, so
-  short-hike cycling can farm the feather/echo rares; note for the
-  Session 6 rarity pass.
+- **Time-of-day read side** — the small session that brings seg_sunset
+  and seg_stars back: expose the day-wash phase, gate their sky needs,
+  and fill stars' reserved closing slot (TODO comment in spine.js
+  pickDeal).
+- **Virtual setting drives scenery** — the locked end-state: the
+  spine's setting replaces the meter-based biome palette cycle as the
+  one authority on where you are. Until then the tint and the tags can
+  disagree (placeholder art hides it).
+- **Creature journal biome tag** — meetCreature still reads the
+  upcoming node's `biome`; move to the spine's virtual setting when it
+  becomes the authority.
+- **Per-exit successors** — revisit trigger unchanged (SEGMENT-TABLE
+  REWIRING NOTES): build when a segment's point is divergent futures.
+- **Session 6 rarity pass** — weighted-next placeholder numbers, the
+  trail-cycling rare farm (once_per_hike resets each trail), and hat
+  odds all tune together.
+- **More every_hike_ok segments** — the standing validator warning (7
+  repeatable < 14 max targetDeals) is the authoring backlog: long
+  hikes lean on repeats until the repeatable pool grows.
 
 ## Polish, whenever
 

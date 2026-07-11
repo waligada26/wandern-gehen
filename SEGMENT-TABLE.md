@@ -1,7 +1,9 @@
 # SEGMENT-TABLE — planning artifact for the procedural spine
 
 > **v1.1 — reviewed 11 Jul 2026; open items marked ⚠️ remain open.**
-> **The spine does not exist yet (ENGINE-STATE §3/§6); this doc plans it.**
+> **STATUS: rules 1–7 implemented 11 Jul 2026 (spine.js dealer); this
+> table remains the tag/spec authority.** Engine reality lives in
+> ENGINE-STATE.md §3.
 
 Derived 11 July 2026 from the live `src/game/content.json` (commit
 `cc79df4`, 46 nodes) by walking the actual next-pointer graph. A

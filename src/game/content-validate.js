@@ -236,6 +236,43 @@ export function validateContent (content)
         if (!owner[id]) warn(`node "${id}" is in no segment`);
     }
 
+    //  --- deck viability (the dealer, spine.js) ---
+
+    const deckSegs = Object.entries(segments)
+        .filter(([, s]) => !s.skeleton && !s.heldOut);
+
+    //  The relaxation ladder can always terminate only if something is
+    //  dealable under every un-relaxable gate: any setting, no sky
+    //  needs, repeatable.
+    const alwaysLegal = deckSegs.filter(([, s]) =>
+        (((s.needs && s.needs.setting) || 'any') === 'any')
+        && (!s.needs || !s.needs.sky || s.needs.sky.length === 0)
+        && s.frequency === 'every_hike_ok');
+    if (alwaysLegal.length === 0)
+    {
+        warn('no always-legal deck segment (setting any, no sky needs, every_hike_ok) — dealer relaxation may not terminate');
+    }
+
+    //  The ending must stay dealable in ANY setting — it can arrive
+    //  early on deck exhaustion, whatever the world looks like.
+    for (const [segId, s] of Object.entries(segments))
+    {
+        if (s.skeleton === 'ending' && ((s.needs && s.needs.setting) || 'any') !== 'any')
+        {
+            warn(`ending segment "${segId}" must keep needs.setting "any" — it must be dealable regardless of setting`);
+        }
+    }
+
+    //  Early warning, not an error: long hikes lean on repeats once
+    //  the once_per_hike pool is spent. Fix by authoring more
+    //  every_hike_ok segments, not by relaxing rules.
+    const repeatable = deckSegs.filter(([, s]) => s.frequency !== 'once_per_hike').length;
+    if (deckSegs.length > 0 && repeatable < 14)
+    {
+        warn(`dealable deck has only ${repeatable} repeatable (every_hike_ok) segment(s) — `
+            + 'below max targetDeals (14); long hikes will lean hard on repeats');
+    }
+
     //  Skeleton: exactly one opening and one ending; start must be the
     //  opening segment's entry.
     const openings = Object.entries(segments).filter(([, s]) => s.skeleton === 'opening');

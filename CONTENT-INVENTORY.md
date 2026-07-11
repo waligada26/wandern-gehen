@@ -19,23 +19,32 @@ coverage; 42 `@exit` pointers.** Regenerate after content changes.
 
 `trigger` decorative; `biome` journal-tag only ("forest" everywhere).
 
-## How the trail flows now
+## How the trail flows now — the dealer
 
 Nodes chain **inside** a segment with literal `next` pointers; a
-`"next": "@exit"` leaves the segment and the **spine** (spine.js) deals
-the next segment's entry. **This session the dealer is a fixed-order
-stub** reproducing the historical trunk — every hike deals all 20
-segments in this order:
+`"next": "@exit"` leaves the segment and the **spine's dealer**
+(spine.js) picks what comes next. **There is no fixed order anymore.**
+Every hike is:
 
-butterfly → glove → fork_vista → painted_sign → stream_coin → hiker →
-litter → sunset → rain → mist → hollow → pond → cairn_topple → whistle
-→ marker → bothy → log_rest → dog → stars → gate_ending
+1. **Opener** — seg_butterfly (the `start` node).
+2. **The early fork** — seg_fork_vista slotted at deal position 2 or 3
+   (rolled per trail, saved).
+3. **The dealt middle** — drawn from the 16-segment deck until the
+   trail's `targetDeals` (8–14, avg-of-two-rolls; THE duration dial)
+   is reached, under SEGMENT-TABLE's rules: once_per_hike spent, no
+   back-to-back, recency-penalized repeats, setting gate vs the
+   spine's virtual setting, sky gates (rain needs clear; wet lasts 3
+   stops, mist 2), heavies only ever touch light.
+4. **The ending** — seg_gate_ending, with one light buffer first if
+   the previous deal wasn't light. Deck exhaustion deals the ending
+   early (a short hike, never a crash).
 
-Two accepted micro-changes vs the old fixed trunk (v1 single-successor
-collapse): painted_sign is no longer high-ridge-only, and everyone
-walks BOTH cairn_topple and whistle (pond's options used to route to
-one or the other). **Longest walk 38 stops, shortest 26** (25/26
-boundary depends on coin's 90/10 roll).
+seg_sunset and seg_stars are **held out** (need time-of-day). Hike
+length now varies per deal — roughly 15–30 stops depending on
+targetDeals and branches. Expect **one standing validator warning** at
+load: only 7 of 16 deck segments are repeatable (every_hike_ok), below
+max targetDeals 14 — an authoring signal to write more repeatable
+segments, not a bug.
 
 ## Segments (the manifest)
 
