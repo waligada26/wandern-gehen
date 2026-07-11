@@ -33,7 +33,7 @@
       "landmark": null,
       "linger": { "ms": 3500 },
       "gapM": 10,
-      "next": "glove_fencepost_01"
+      "next": "@exit"
     },
     "butterfly_off_beat": {
       "type": "beat",
@@ -43,7 +43,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "glove_fencepost_01"
+      "next": "@exit"
     },
     "glove_fencepost_01": {
       "type": "choice",
@@ -61,7 +61,7 @@
         {
           "label": "Walk past",
           "effects": {},
-          "next": "fork_cairn_01"
+          "next": "@exit"
         }
       ]
     },
@@ -73,7 +73,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "fork_cairn_01"
+      "next": "@exit"
     },
     "fork_cairn_01": {
       "type": "choice",
@@ -90,7 +90,7 @@
         {
           "label": "Follow the low path",
           "effects": {},
-          "next": "stream_crossing_01"
+          "next": "@exit"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "prompt": "The trees open up. Below, the whole valley is holding still in the light.",
       "landmark": "signpost",
       "linger": { "ms": 3500 },
-      "next": "painted_sign_01"
+      "next": "@exit"
     },
     "painted_sign_01": {
       "type": "choice",
@@ -119,7 +119,7 @@
         {
           "label": "Stay on the path",
           "effects": {},
-          "next": "stream_crossing_01"
+          "next": "@exit"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "landmark": null,
       "linger": { "ms": 3500 },
       "gapM": 10,
-      "next": "stream_crossing_01"
+      "next": "@exit"
     },
     "stream_crossing_01": {
       "type": "choice",
@@ -169,7 +169,7 @@
           "label": "Let the water keep it",
           "effects": {},
           "next": [
-            { "id": "encounter_hiker_01", "weight": 90 },
+            { "id": "@exit", "weight": 90 },
             { "id": "fish_look_beat", "weight": 10 }
           ]
         }
@@ -183,7 +183,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "encounter_hiker_01"
+      "next": "@exit"
     },
     "fish_look_beat": {
       "type": "beat",
@@ -193,7 +193,7 @@
       "landmark": null,
       "linger": { "ms": 3500 },
       "gapM": 10,
-      "next": "encounter_hiker_01"
+      "next": "@exit"
     },
     "encounter_hiker_01": {
       "type": "choice",
@@ -205,12 +205,12 @@
         {
           "label": "Say hello",
           "effects": { "morale": 1 },
-          "next": "litter_packet_01"
+          "next": "@exit"
         },
         {
           "label": "Nod and pass",
           "effects": {},
-          "next": "litter_packet_01"
+          "next": "@exit"
         }
       ]
     },
@@ -229,7 +229,7 @@
         {
           "label": "Leave it turning",
           "effects": {},
-          "next": "sunset_pause_01"
+          "next": "@exit"
         }
       ]
     },
@@ -241,7 +241,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "sunset_pause_01"
+      "next": "@exit"
     },
     "sunset_pause_01": {
       "type": "choice",
@@ -253,12 +253,12 @@
         {
           "label": "Stop and watch a while",
           "effects": { "morale": 1 },
-          "next": "rain_shower_01"
+          "next": "@exit"
         },
         {
           "label": "Walk on through the gold",
           "effects": {},
-          "next": "rain_shower_01"
+          "next": "@exit"
         }
       ]
     },
@@ -292,7 +292,7 @@
       "landmark": null,
       "linger": { "ms": 4000 },
       "gapM": 10,
-      "next": "mist_valley_01"
+      "next": "@exit"
     },
     "rain_walk_beat": {
       "type": "beat",
@@ -302,7 +302,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "mist_valley_01"
+      "next": "@exit"
     },
     "rainbow_beat": {
       "type": "beat",
@@ -312,7 +312,7 @@
       "landmark": null,
       "linger": { "ms": 4000 },
       "gapM": 10,
-      "next": "mist_valley_01"
+      "next": "@exit"
     },
     "mist_valley_01": {
       "type": "choice",
@@ -341,7 +341,7 @@
       "landmark": null,
       "linger": { "ms": 4000 },
       "gapM": 10,
-      "next": "hollow_tree_01"
+      "next": "@exit"
     },
     "mist_walk_beat": {
       "type": "beat",
@@ -351,7 +351,7 @@
       "landmark": null,
       "linger": { "ms": 3500 },
       "gapM": 10,
-      "next": "hollow_tree_01"
+      "next": "@exit"
     },
     "hollow_tree_01": {
       "type": "choice",
@@ -371,7 +371,7 @@
         {
           "label": "Best not",
           "effects": {},
-          "next": "pond_stones_01"
+          "next": "@exit"
         }
       ]
     },
@@ -383,7 +383,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "pond_stones_01"
+      "next": "@exit"
     },
     "hollow_rare_beat": {
       "type": "beat",
@@ -393,7 +393,7 @@
       "landmark": null,
       "linger": { "ms": 4000 },
       "gapM": 10,
-      "next": "pond_stones_01"
+      "next": "@exit"
     },
     "pond_stones_01": {
       "type": "choice",
@@ -410,7 +410,7 @@
         {
           "label": "Keep going",
           "effects": {},
-          "next": "whistle_valley_01"
+          "next": "@exit"
         }
       ]
     },
@@ -422,7 +422,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "cairn_topple_01"
+      "next": "@exit"
     },
     "cairn_topple_01": {
       "type": "choice",
@@ -440,7 +440,7 @@
         {
           "label": "Step around it",
           "effects": {},
-          "next": "marker_read_01"
+          "next": "@exit"
         }
       ]
     },
@@ -452,7 +452,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "marker_read_01"
+      "next": "@exit"
     },
     "whistle_valley_01": {
       "type": "choice",
@@ -472,7 +472,7 @@
         {
           "label": "Keep your breath",
           "effects": {},
-          "next": "marker_read_01"
+          "next": "@exit"
         }
       ]
     },
@@ -484,7 +484,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "marker_read_01"
+      "next": "@exit"
     },
     "echo_rare_beat": {
       "type": "beat",
@@ -494,7 +494,7 @@
       "landmark": null,
       "linger": { "ms": 4000 },
       "gapM": 10,
-      "next": "marker_read_01"
+      "next": "@exit"
     },
     "marker_read_01": {
       "type": "choice",
@@ -511,7 +511,7 @@
         {
           "label": "Walk past",
           "effects": {},
-          "next": "bothy_door_01"
+          "next": "@exit"
         }
       ]
     },
@@ -523,7 +523,7 @@
       "landmark": null,
       "linger": { "ms": 3500 },
       "gapM": 10,
-      "next": "bothy_door_01"
+      "next": "@exit"
     },
     "bothy_door_01": {
       "type": "choice",
@@ -541,7 +541,7 @@
         {
           "label": "Leave it be",
           "effects": {},
-          "next": "log_rest_01"
+          "next": "@exit"
         }
       ]
     },
@@ -553,7 +553,7 @@
       "landmark": null,
       "linger": { "ms": 3500 },
       "gapM": 10,
-      "next": "log_rest_01"
+      "next": "@exit"
     },
     "log_rest_01": {
       "type": "choice",
@@ -566,12 +566,12 @@
           "label": "Sit, sip, and watch a while",
           "requires": { "water": 1 },
           "effects": { "water": -1, "energy": 1, "morale": 1 },
-          "next": "dog_stile_01"
+          "next": "@exit"
         },
         {
           "label": "Keep a good rhythm going",
           "effects": {},
-          "next": "dog_stile_01"
+          "next": "@exit"
         }
       ]
     },
@@ -602,7 +602,7 @@
       "landmark": null,
       "linger": { "ms": 3500 },
       "gapM": 10,
-      "next": "stars_clear_01"
+      "next": "@exit"
     },
     "dog_home_beat": {
       "type": "beat",
@@ -612,7 +612,7 @@
       "landmark": null,
       "linger": { "ms": 3000 },
       "gapM": 10,
-      "next": "stars_clear_01"
+      "next": "@exit"
     },
     "stars_clear_01": {
       "type": "choice",
@@ -629,7 +629,7 @@
         {
           "label": "Keep to the trail",
           "effects": {},
-          "next": "gate_01"
+          "next": "@exit"
         }
       ]
     },
@@ -641,7 +641,7 @@
       "landmark": null,
       "linger": { "ms": 5000 },
       "gapM": 10,
-      "next": "gate_01"
+      "next": "@exit"
     },
     "gate_01": {
       "type": "beat",
@@ -657,6 +657,155 @@
       "biome": "forest",
       "prompt": "The path climbs one last rise and opens onto a quiet overlook. That's the trail for today.",
       "landmark": "cairn"
+    }
+  },
+  "segments": {
+    "seg_butterfly": {
+      "entry": "butterfly_pack_01",
+      "members": ["butterfly_pack_01", "butterfly_ride_beat", "butterfly_off_beat"],
+      "weight": "light",
+      "needs": { "setting": "any" },
+      "frequency": "every_hike_ok",
+      "skeleton": "opening"
+    },
+    "seg_glove": {
+      "entry": "glove_fencepost_01",
+      "members": ["glove_fencepost_01", "glove_hung_beat"],
+      "weight": "light",
+      "needs": { "setting": "farmland" },
+      "frequency": "once_per_hike"
+    },
+    "seg_fork_vista": {
+      "entry": "fork_cairn_01",
+      "members": ["fork_cairn_01", "vista_overlook_01"],
+      "weight": "medium",
+      "needs": { "setting": "valley" },
+      "frequency": "once_per_hike"
+    },
+    "seg_painted_sign": {
+      "entry": "painted_sign_01",
+      "members": ["painted_sign_01", "sign_vista_beat"],
+      "weight": "light",
+      "needs": { "setting": "woodland" },
+      "frequency": "once_per_hike"
+    },
+    "seg_stream_coin": {
+      "entry": "stream_crossing_01",
+      "members": ["stream_crossing_01", "coin_stream_01", "coin_beat", "fish_look_beat"],
+      "weight": "medium",
+      "needs": { "setting": "water" },
+      "frequency": "every_hike_ok"
+    },
+    "seg_hiker": {
+      "entry": "encounter_hiker_01",
+      "members": ["encounter_hiker_01"],
+      "weight": "light",
+      "needs": { "setting": "any" },
+      "frequency": "every_hike_ok"
+    },
+    "seg_litter": {
+      "entry": "litter_packet_01",
+      "members": ["litter_packet_01", "litter_pocketed_beat"],
+      "weight": "light",
+      "needs": { "setting": "any" },
+      "frequency": "every_hike_ok"
+    },
+    "seg_sunset": {
+      "entry": "sunset_pause_01",
+      "members": ["sunset_pause_01"],
+      "weight": "light",
+      "needs": { "setting": "any", "sky": ["goldenhour"] },
+      "frequency": "once_per_hike",
+      "heldOut": true
+    },
+    "seg_rain": {
+      "entry": "rain_shower_01",
+      "members": ["rain_shower_01", "pine_shelter_beat", "rain_walk_beat", "rainbow_beat"],
+      "weight": "light",
+      "needs": { "setting": "any", "sky": ["clear"] },
+      "sets": { "state": "wet", "stops": 3 },
+      "frequency": "every_hike_ok"
+    },
+    "seg_mist": {
+      "entry": "mist_valley_01",
+      "members": ["mist_valley_01", "mist_wait_beat", "mist_walk_beat"],
+      "weight": "light",
+      "needs": { "setting": "valley" },
+      "sets": { "state": "misty", "stops": 2 },
+      "frequency": "every_hike_ok"
+    },
+    "seg_hollow": {
+      "entry": "hollow_tree_01",
+      "members": ["hollow_tree_01", "hollow_acorn_beat", "hollow_rare_beat"],
+      "weight": "light",
+      "needs": { "setting": "woodland" },
+      "frequency": "once_per_hike"
+    },
+    "seg_pond": {
+      "entry": "pond_stones_01",
+      "members": ["pond_stones_01", "pond_stones_beat_01"],
+      "weight": "light",
+      "needs": { "setting": "water" },
+      "frequency": "every_hike_ok"
+    },
+    "seg_cairn_topple": {
+      "entry": "cairn_topple_01",
+      "members": ["cairn_topple_01", "cairn_restacked_beat"],
+      "weight": "light",
+      "needs": { "setting": "any" },
+      "frequency": "once_per_hike"
+    },
+    "seg_whistle": {
+      "entry": "whistle_valley_01",
+      "members": ["whistle_valley_01", "echo_beat", "echo_rare_beat"],
+      "weight": "light",
+      "needs": { "setting": "valley" },
+      "frequency": "once_per_hike"
+    },
+    "seg_marker": {
+      "entry": "marker_read_01",
+      "members": ["marker_read_01", "marker_read_beat_01"],
+      "weight": "light",
+      "needs": { "setting": "any" },
+      "frequency": "once_per_hike"
+    },
+    "seg_bothy": {
+      "entry": "bothy_door_01",
+      "members": ["bothy_door_01", "bothy_beat"],
+      "weight": "medium",
+      "needs": { "setting": "open" },
+      "frequency": "once_per_hike"
+    },
+    "seg_log_rest": {
+      "entry": "log_rest_01",
+      "members": ["log_rest_01"],
+      "weight": "medium",
+      "needs": { "setting": "woodland" },
+      "frequency": "every_hike_ok"
+    },
+    "seg_dog": {
+      "entry": "dog_stile_01",
+      "members": ["dog_stile_01", "dog_along_beat", "dog_home_beat"],
+      "weight": "heavy",
+      "needs": { "setting": "farmland" },
+      "frequency": "once_per_hike"
+    },
+    "seg_stars": {
+      "entry": "stars_clear_01",
+      "members": ["stars_clear_01", "stars_beat"],
+      "weight": "medium",
+      "needs": { "setting": "any", "sky": ["night", "clear"] },
+      "frequency": "once_per_hike",
+      "heldOut": true,
+      "skeleton": "closing"
+    },
+    "seg_gate_ending": {
+      "entry": "gate_01",
+      "members": ["gate_01", "trail_end_01"],
+      "weight": "heavy",
+      "needs": { "setting": "any" },
+      "frequency": "once_per_hike",
+      "skeleton": "ending"
     }
   }
 }

@@ -1,6 +1,6 @@
 import { Scene, TintModes } from 'phaser';
-import content from '../content.json';
-import { validateContent } from '../content-validate';
+import { content } from '../content-load';
+import { Spine, EXIT } from '../spine';
 import { writeSave } from '../save';
 import { savePhoto, latestPhoto, sharePhoto } from '../photos';
 import {
@@ -102,11 +102,6 @@ const BIOME_PALETTES = [
 //  biome length 10× like everything else.
 const BIOME_LENGTH_M = FAST ? 150 : 1500;
 const BIOME_FADE_M = 18;
-
-//  Effects only live on options — beats show, choices change state.
-//  Any effects authored onto an optionless node are warned about and
-//  stripped here, once, at load (see content-validate.js).
-validateContent(content);
 
 const UI_FONT = {
     fontFamily: 'Courier New, monospace',
@@ -241,6 +236,16 @@ export class Game extends Scene
             this.rollNextLandmark();
         }
 
+        //  The spine deals segments (fixed order this session — see
+        //  spine.js). Initialized here, before any input can resolve a
+        //  stop, so a restored tap on a terminal node deals correctly.
+        //  The current segment is always DERIVED from currentId, never
+        //  stored — test teleports (window.__wg) self-heal. A save with
+        //  no spine key (pre-spine) seeds history from currentId alone.
+        this.spine = new Spine(content.segments,
+            this.savedHike ? this.savedHike.spine : null,
+            this.currentId);
+
         //  The field journal's little tab, bottom-left thumb reach.
         const journalTab = this.add.rectangle(56, 614, 88, 30, 0x2e2a26, 0.85)
             .setDepth(20).setInteractive({ useHandCursor: true });
@@ -292,7 +297,8 @@ export class Game extends Scene
             nextLandmarkAtM: this.nextLandmarkAtM,
             journal: this.journal,
             hatRemainingM: this.hatRemainingM,
-            flags: this.flags
+            flags: this.flags,
+            spine: this.spine.serialize()
         });
     }
 
@@ -498,7 +504,22 @@ export class Game extends Scene
     //  replays the same outcome instead of re-rolling it.
     advanceTo (next)
     {
-        this.currentId = this.pickNext(next);
+        //  One resolved stop = one tick of the world-state timers
+        //  (wet/misty are counted in stops). Interrupts (hat, fox)
+        //  bypass advanceTo, so they don't consume stops.
+        this.spine.onStopResolved();
+
+        let id = this.pickNext(next);
+        //  "@exit" = this segment is done; the spine deals the next
+        //  one. Checked AFTER pickNext because an exit can live inside
+        //  a weighted array (coin_stream). currentId never holds the
+        //  sentinel — it's substituted before assignment, so saves and
+        //  the spawn check only ever see real node ids.
+        if (id === EXIT)
+        {
+            id = this.spine.nextEntry(this.spine.segmentOf(this.currentId));
+        }
+        this.currentId = id;
         this.rollNextLandmark();
         this.saveNow();
     }
@@ -539,6 +560,11 @@ export class Game extends Scene
         //  guestbook that remembers) depend on them outliving the trail
         //  that set them.
         this.refreshStateText();
+        //  Per-hike spine state (history, world timers, target) resets
+        //  with the trail. LOCKED (v1): recency resets too — history is
+        //  purely per-hike. Revisit trigger: persist recency across
+        //  trails if back-to-back hikes feel samey.
+        this.spine.resetForNewTrail(content.start);
         this.resolveStop({}, content.start);
     }
 

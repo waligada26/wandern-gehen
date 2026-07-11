@@ -63,6 +63,31 @@ future payoffs.
   gapM 10 (7s walk + ~3s landmark scroll-in). If that should feel more
   immediate, drop gapM to ~1–3 (scroll-in sets a ~3s floor).
 
+## Parked from spine build session 1 (11 July 2026)
+
+Session 2 of the spine build — the real dealer, replacing spine.js's
+FIXED_ORDER stub. Everything below has its data already in place
+(segments manifest, save shape, world-timer ticks):
+
+- **Stitching rules 1–6** (SEGMENT-TABLE.md): setting gate, wet blocks
+  clear-needers, self-exclusion, held-out sky segments, no-two-heavies,
+  frequency semantics (once_per_hike + no back-to-back + recency
+  penalty, N≈5).
+- **The skeleton**: fixed opener (butterfly), early fork slot, shuffled
+  middle sized by `targetDeals` (the duration dial), reserved stars
+  closing slot, fixed gate ending.
+- **Setting-advance policy** — the virtual setting must rotate or the
+  setting gate starves the deck (deadlock risk noted in recon).
+- **Deck-exhaustion relaxation order** — decide before rules go live:
+  relax recency first, then setting, never once_per_hike; the ending
+  must always stay reachable ("no legal deal" would be a crash).
+- **Creature journal biome tag** — meetCreature reads the upcoming
+  node's `biome`; move it to the spine's virtual setting when that
+  becomes the scenery authority.
+- **Trail-cycling rare farm** — once_per_hike resets per trail, so
+  short-hike cycling can farm the feather/echo rares; note for the
+  Session 6 rarity pass.
+
 ## Polish, whenever
 
 - HUD value pulse when a stat changes (canteen fills → water number blinks)

@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import content from '../content.json';
+import { content } from '../content-load';
 import { loadSave } from '../save';
 import { unlockAudio } from '../audio';
 
