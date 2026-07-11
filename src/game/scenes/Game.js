@@ -1,5 +1,6 @@
 import { Scene, TintModes } from 'phaser';
 import content from '../content.json';
+import { validateContent } from '../content-validate';
 import { writeSave } from '../save';
 import { savePhoto, latestPhoto, sharePhoto } from '../photos';
 import {
@@ -102,6 +103,11 @@ const BIOME_PALETTES = [
 const BIOME_LENGTH_M = FAST ? 150 : 1500;
 const BIOME_FADE_M = 18;
 
+//  Effects only live on options — beats show, choices change state.
+//  Any effects authored onto an optionless node are warned about and
+//  stripped here, once, at load (see content-validate.js).
+validateContent(content);
+
 const UI_FONT = {
     fontFamily: 'Courier New, monospace',
     color: '#f4ede0',
@@ -203,6 +209,9 @@ export class Game extends Scene
         //  Rare-encounter state: the journal (first sightings), the hat
         //  window (in walked meters), and the roll odometer.
         this.journal = this.savedHike ? (this.savedHike.journal || {}) : {};
+        //  Flags default to {} so saves written before flags existed
+        //  still load (no SAVE_VERSION bump needed for an added field).
+        this.flags = this.savedHike ? (this.savedHike.flags || {}) : {};
         this.hatRemainingM = this.savedHike ? (this.savedHike.hatRemainingM || 0) : 0;
         this.hatSprite.setVisible(this.hatRemainingM > 0);
         this.lastRollM = this.distanceM;
@@ -282,7 +291,8 @@ export class Game extends Scene
             currentId: this.currentId,
             nextLandmarkAtM: this.nextLandmarkAtM,
             journal: this.journal,
-            hatRemainingM: this.hatRemainingM
+            hatRemainingM: this.hatRemainingM,
+            flags: this.flags
         });
     }
 
@@ -369,6 +379,16 @@ export class Game extends Scene
 
     rollNextLandmark ()
     {
+        //  A node may pin its own arrival distance (gapM, in walked
+        //  meters) — used by follow-up beats so a payoff lands on the
+        //  heels of the tap that caused it, not after the full wander gap.
+        const upcoming = content.nodes[this.currentId];
+        if (upcoming && typeof upcoming.gapM === 'number')
+        {
+            this.nextLandmarkAtM = this.distanceM + upcoming.gapM;
+            return;
+        }
+
         const rollA = Math.random() * GAP_ROLL_S;
         const rollB = Math.random() * GAP_ROLL_S;
         const gapS = (GAP_FLOOR_S + (rollA + rollB) / 2) / (FAST ? 10 : 1);
@@ -461,15 +481,51 @@ export class Game extends Scene
         this.stateText.setText(line);
     }
 
-    //  Resolve the current stop: apply effects, advance the graph, walk on.
-    resolveStop (effects, nextId)
+    //  Resolve the current stop: apply what the tap chose, then advance.
+    resolveStop (effects, next, flags)
     {
         this.applyEffects(effects);
-        this.currentId = nextId;
+        this.applyFlags(flags);
         this.dismissCard();
         this.resumeWalk();
+        this.advanceTo(next);
+    }
+
+    //  The single advance funnel — every resolved stop (card tap, linger
+    //  end, new trail) moves the graph through here and nowhere else.
+    //  A weighted `next` is rolled HERE, at resolve time, and saved in
+    //  the same breath — so reloading before the follow-up arrives
+    //  replays the same outcome instead of re-rolling it.
+    advanceTo (next)
+    {
+        this.currentId = this.pickNext(next);
         this.rollNextLandmark();
         this.saveNow();
+    }
+
+    //  `next` is a node id, or an array of weighted outcomes:
+    //  [{ "id": "...", "weight": 90 }, { "id": "...", "weight": 10 }].
+    //  Weights are placeholders; real rarity tuning is Session 6.
+    pickNext (next)
+    {
+        if (!Array.isArray(next)) return next;
+        const total = next.reduce((sum, outcome) => sum + outcome.weight, 0);
+        let roll = Math.random() * total;
+        for (const outcome of next)
+        {
+            roll -= outcome.weight;
+            if (roll <= 0) return outcome.id;
+        }
+        return next[next.length - 1].id;   // float dust — take the last
+    }
+
+    //  Flags: one-way "this happened" markers, kept OFF the stats bag so
+    //  they can never collide with effects keys or the 0–5 clamp.
+    //  Write-only for now; the read side (conditional prompts, flag
+    //  requires) comes later.
+    applyFlags (flags)
+    {
+        for (const name of flags || []) this.flags[name] = true;
     }
 
     //  An ending resolves into a fresh trail from the top of the graph.
@@ -478,6 +534,10 @@ export class Game extends Scene
         this.distanceM = 0;
         this.lastRollM = 0;
         this.state = { ...STATE_START };
+        //  this.flags is deliberately NOT reset — flags are cross-trail
+        //  markers, and future payoffs (a glove gone on a later hike, a
+        //  guestbook that remembers) depend on them outliving the trail
+        //  that set them.
         this.refreshStateText();
         this.resolveStop({}, content.start);
     }
@@ -639,11 +699,9 @@ export class Game extends Scene
             onComplete: () => { this.lingering = false; }
         });
 
-        //  Advance the graph exactly as resolveStop would — effects were
-        //  already applied when the hold began.
-        this.currentId = node.next;
-        this.rollNextLandmark();
-        this.saveNow();
+        //  Advance through the same funnel as a card resolution — effects
+        //  were already applied when the hold began.
+        this.advanceTo(node.next);
     }
 
     //  --- rare encounters ---
@@ -690,25 +748,52 @@ export class Game extends Scene
         }
     }
 
-    //  A lucky hat, met on the trail. Wearing it opens the window.
+    //  A lucky hat, met on the trail — a real choice, not a pickup:
+    //  wear it and the window opens, or leave it where it hangs. The
+    //  rare roll is intentionally spent either way — a declined hat
+    //  never comes back, so there's nothing to fish for by reloading.
+    //  (A "save it for later" inventory is deliberately out of scope
+    //  for now.)
     meetHat ()
     {
         this.pauseWalk();
         this.time.delayedCall(450, () => {
-            this.cardKind = 'beat';
-            this.card = this.buildSimpleCard(
+            this.cardKind = 'choice';
+            this.card = this.buildStopCard(
                 'A lucky hat, snagged on a bramble. Somehow it fits perfectly.',
-                'Wear it',
-                () => {
-                    this.hatRemainingM = HAT_WINDOW_M;
-                    this.hatSprite.setVisible(true);
-                    setShimmer(true);    // the world audibly brightens
-                    this.refreshStateText();
-                    this.clearSpecial();
-                    this.dismissCard();
-                    this.resumeWalk();
-                    this.saveNow();
-                });
+                [
+                    {
+                        label: 'Wear it',
+                        onTap: () => {
+                            this.hatRemainingM = HAT_WINDOW_M;
+                            this.hatSprite.setVisible(true);
+                            setShimmer(true);    // the world audibly brightens
+                            this.refreshStateText();
+                            this.clearSpecial();
+                            this.dismissCard();
+                            this.resumeWalk();
+                            this.saveNow();
+                        }
+                    },
+                    {
+                        label: 'Leave it on the bramble',
+                        onTap: () => {
+                            //  No effects; the hat falls behind at path
+                            //  speed as she walks on, then it's gone.
+                            const s = this.special.sprite;
+                            this.special = null;
+                            this.tweens.add({
+                                targets: s,
+                                x: -60,
+                                duration: ((s.x + 60) / PATH_SPEED) * 1000,
+                                onComplete: () => s.destroy()
+                            });
+                            this.dismissCard();
+                            this.resumeWalk();
+                            this.saveNow();
+                        }
+                    }
+                ]);
             this.tweens.add({ targets: this.card, alpha: 1, duration: 300 });
         });
     }
@@ -907,70 +992,56 @@ export class Game extends Scene
 
     //  --- cards, built from whatever node just arrived ---
 
-    //  Bottom panel: two option buttons for a choice, one for a beat.
-    //  Buttons sit side by side in the thumb zone, big tap targets.
-    buildCard (node)
+    //  The one standard stop card: a bottom panel with the prompt and
+    //  big thumb-zone buttons. `buttons` is one { label, enabled, onTap }
+    //  for a beat's gentle continue, or two for a choice — everything
+    //  that stops the walk (data nodes AND trail moments like the hat)
+    //  goes through here, so every card looks and behaves identically.
+    buildStopCard (promptText, buttons)
     {
         const children = [
             this.add.rectangle(180, 552, 336, 156, 0x2e2a26, 0.93),
             this.add.rectangle(180, 552, 336, 156).setStrokeStyle(2, 0xf4ede0, 0.35),
-            this.add.text(180, 494, node.prompt, {
+            this.add.text(180, 494, promptText, {
                 ...UI_FONT, fontSize: 15, wordWrap: { width: 304 }
             }).setOrigin(0.5, 0).setResolution(3)
         ];
 
-        const addButton = (x, w, fill, label, enabled, onTap) => {
-            const rect = this.add.rectangle(x, 585, w, 62, fill, enabled ? 1 : 0.35);
-            const text = this.add.text(x, 585, label, {
+        const fills = [0x9ab873, 0xd9b380];
+        buttons.forEach((btn, i) => {
+            const x = buttons.length === 1 ? 180 : (i === 0 ? 97 : 263);
+            const w = buttons.length === 1 ? 240 : 150;
+            const enabled = btn.enabled !== false;
+            const rect = this.add.rectangle(x, 585, w, 62, fills[i], enabled ? 1 : 0.35);
+            const text = this.add.text(x, 585, btn.label, {
                 ...UI_FONT, fontSize: 14, color: '#2e2a26', wordWrap: { width: w - 18 }
             }).setOrigin(0.5).setResolution(3).setAlpha(enabled ? 1 : 0.5);
             if (enabled)
             {
                 rect.setInteractive({ useHandCursor: true });
-                rect.on('pointerdown', onTap);
+                rect.on('pointerdown', btn.onTap);
             }
             children.push(rect, text);
-        };
-
-        if (node.type === 'choice')
-        {
-            const fills = [0x9ab873, 0xd9b380];
-            node.options.forEach((opt, i) => {
-                addButton(i === 0 ? 97 : 263, 150, fills[i],
-                    opt.label,
-                    this.meetsRequires(opt.requires),
-                    () => this.resolveStop(opt.effects, opt.next));
-            });
-        }
-        else    // beat: shows something, asks nothing — a single gentle button
-        {
-            addButton(180, 240, 0x9ab873, 'Walk on',
-                true,
-                () => this.resolveStop(node.effects, node.next));
-        }
+        });
 
         return this.add.container(0, 0, children).setDepth(100).setAlpha(0);
     }
 
-    //  One prompt, one button — used for trail moments outside the graph
-    //  (the lucky hat).
-    buildSimpleCard (promptText, buttonLabel, onTap)
+    //  A card built from whatever node just arrived.
+    buildCard (node)
     {
-        const button = this.add.rectangle(180, 585, 240, 62, 0x9ab873)
-            .setInteractive({ useHandCursor: true });
-        button.on('pointerdown', onTap);
-
-        return this.add.container(0, 0, [
-            this.add.rectangle(180, 552, 336, 156, 0x2e2a26, 0.93),
-            this.add.rectangle(180, 552, 336, 156).setStrokeStyle(2, 0xf4ede0, 0.35),
-            this.add.text(180, 494, promptText, {
-                ...UI_FONT, fontSize: 15, wordWrap: { width: 304 }
-            }).setOrigin(0.5, 0).setResolution(3),
-            button,
-            this.add.text(180, 585, buttonLabel, {
-                ...UI_FONT, fontSize: 14, color: '#2e2a26'
-            }).setOrigin(0.5).setResolution(3)
-        ]).setDepth(100).setAlpha(0);
+        if (node.type === 'choice')
+        {
+            return this.buildStopCard(node.prompt, node.options.map(opt => ({
+                label: opt.label,
+                enabled: this.meetsRequires(opt.requires),
+                onTap: () => this.resolveStop(opt.effects, opt.next, opt.flags)
+            })));
+        }
+        //  beat: shows something, asks nothing — a single gentle button
+        return this.buildStopCard(node.prompt, [
+            { label: 'Walk on', onTap: () => this.resolveStop(node.effects, node.next) }
+        ]);
     }
 
     //  The keepsake: a little framed print of the moment, with its caption,

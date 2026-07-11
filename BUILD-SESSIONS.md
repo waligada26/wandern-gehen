@@ -11,7 +11,8 @@ Sessions are mostly sequential. A few marked *(may spill into two sittings)* are
 1. **Point Claude Code at the relevant docs** at the start (this file + whichever design doc applies). Tell it the session number and goal.
 2. **Work toward the one "done when."** Resist scope creep — extra ideas go in a notes file for later.
 3. **Test on your actual phone** at least once per session (the whole point is the mobile feel). Once Session 1 is live, this is just opening the URL.
-4. **Commit to git at the end** (and at any working checkpoint mid-session). This is your undo button. A broken experiment is one `git` command away from rolling back.
+4. **Before committing, update ENGINE-STATE.md** if the session changed engine behavior, schema, save format, or validation — it must always describe the code as it is.
+5. **Commit to git at the end** (and at any working checkpoint mid-session). This is your undo button. A broken experiment is one `git` command away from rolling back.
 
 ---
 

@@ -1,11 +1,80 @@
 {
-  "start": "fork_cairn_01",
+  "start": "butterfly_pack_01",
   "creatures": {
     "fox": { "name": "Fox" },
     "deer": { "name": "Deer" },
     "yeti": { "name": "Yeti" }
   },
   "nodes": {
+    "butterfly_pack_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A butterfly lands on the hiker's pack and stays.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Walk gently",
+          "effects": { "morale": 1 },
+          "next": "butterfly_ride_beat"
+        },
+        {
+          "label": "Carry on as normal",
+          "effects": {},
+          "next": "butterfly_off_beat"
+        }
+      ]
+    },
+    "butterfly_ride_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "For a little while, the pack has a passenger.",
+      "landmark": null,
+      "linger": { "ms": 3500 },
+      "gapM": 10,
+      "next": "glove_fencepost_01"
+    },
+    "butterfly_off_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "It lifts away on the next step, unbothered.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "glove_fencepost_01"
+    },
+    "glove_fencepost_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A knitted glove lies on the path, still holding its shape.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Hang it on the fencepost",
+          "effects": {},
+          "flags": ["hung_glove"],
+          "next": "glove_hung_beat"
+        },
+        {
+          "label": "Walk past",
+          "effects": {},
+          "next": "fork_cairn_01"
+        }
+      ]
+    },
+    "glove_hung_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "It sits on the post like a small flag. Someone will find it.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "fork_cairn_01"
+    },
     "fork_cairn_01": {
       "type": "choice",
       "trigger": "distance",
@@ -15,7 +84,7 @@
       "options": [
         {
           "label": "Take the high ridge",
-          "effects": { "energy": -1 },
+          "effects": { "energy": -1, "morale": 1 },
           "next": "vista_overlook_01"
         },
         {
@@ -32,7 +101,36 @@
       "prompt": "The trees open up. Below, the whole valley is holding still in the light.",
       "landmark": "signpost",
       "linger": { "ms": 3500 },
-      "effects": { "morale": 1 },
+      "next": "painted_sign_01"
+    },
+    "painted_sign_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A hand-painted sign points off-trail: 'worth it — 5 min.'",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Trust it",
+          "effects": {},
+          "flags": ["trusted_sign"],
+          "next": "sign_vista_beat"
+        },
+        {
+          "label": "Stay on the path",
+          "effects": {},
+          "next": "stream_crossing_01"
+        }
+      ]
+    },
+    "sign_vista_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A gap in the trees, a small nameless view, exactly worth it.",
+      "landmark": null,
+      "linger": { "ms": 3500 },
+      "gapM": 10,
       "next": "stream_crossing_01"
     },
     "stream_crossing_01": {
@@ -45,14 +143,57 @@
         {
           "label": "Stop and refill the canteen",
           "effects": { "water": 2 },
-          "next": "encounter_hiker_01"
+          "next": "coin_stream_01"
         },
         {
           "label": "Hop across and press on",
           "effects": { "energy": -1 },
-          "next": "encounter_hiker_01"
+          "next": "coin_stream_01"
         }
       ]
+    },
+    "coin_stream_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "Something glints under the current.",
+      "landmark": "stream",
+      "options": [
+        {
+          "label": "Fish it out",
+          "effects": {},
+          "flags": ["found_coin"],
+          "next": "coin_beat"
+        },
+        {
+          "label": "Let the water keep it",
+          "effects": {},
+          "next": [
+            { "id": "encounter_hiker_01", "weight": 90 },
+            { "id": "fish_look_beat", "weight": 10 }
+          ]
+        }
+      ]
+    },
+    "coin_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A bent old coin, older than the path. It goes in a pocket.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "encounter_hiker_01"
+    },
+    "fish_look_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A fish rises, holds still, and looks at you for a long second before it's gone.",
+      "landmark": null,
+      "linger": { "ms": 3500 },
+      "gapM": 10,
+      "next": "encounter_hiker_01"
     },
     "encounter_hiker_01": {
       "type": "choice",
@@ -64,14 +205,195 @@
         {
           "label": "Say hello",
           "effects": { "morale": 1 },
-          "next": "sunset_pause_01"
+          "next": "litter_packet_01"
         },
         {
           "label": "Nod and pass",
           "effects": {},
+          "next": "litter_packet_01"
+        }
+      ]
+    },
+    "litter_packet_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A crisp packet turns over and over in the grass.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Pocket it",
+          "effects": {},
+          "next": "litter_pocketed_beat"
+        },
+        {
+          "label": "Leave it turning",
+          "effects": {},
           "next": "sunset_pause_01"
         }
       ]
+    },
+    "litter_pocketed_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The grass is just grass again.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "sunset_pause_01"
+    },
+    "sunset_pause_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The light has gone long and golden behind the treeline.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Stop and watch a while",
+          "effects": { "morale": 1 },
+          "next": "rain_shower_01"
+        },
+        {
+          "label": "Walk on through the gold",
+          "effects": {},
+          "next": "rain_shower_01"
+        }
+      ]
+    },
+    "rain_shower_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "Rain starts, soft and warm, the kind that doesn't mean it.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Shelter under the pine",
+          "effects": {},
+          "next": "pine_shelter_beat"
+        },
+        {
+          "label": "Walk on through it",
+          "effects": {},
+          "next": [
+            { "id": "rain_walk_beat", "weight": 85 },
+            { "id": "rainbow_beat", "weight": 15 }
+          ]
+        }
+      ]
+    },
+    "pine_shelter_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "Rain on the canopy, dry shoulders, nowhere to be.",
+      "landmark": null,
+      "linger": { "ms": 4000 },
+      "gapM": 10,
+      "next": "mist_valley_01"
+    },
+    "rain_walk_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The path darkens and shines.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "mist_valley_01"
+    },
+    "rainbow_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "And then, over the far hills — a rainbow, whole and unhurried.",
+      "landmark": null,
+      "linger": { "ms": 4000 },
+      "gapM": 10,
+      "next": "mist_valley_01"
+    },
+    "mist_valley_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "Mist is rolling up from the valley floor.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Wait for it to pass",
+          "effects": {},
+          "next": "mist_wait_beat"
+        },
+        {
+          "label": "Walk into it",
+          "effects": {},
+          "next": "mist_walk_beat"
+        }
+      ]
+    },
+    "mist_wait_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "It slides by like slow water, and the trail reappears.",
+      "landmark": null,
+      "linger": { "ms": 4000 },
+      "gapM": 10,
+      "next": "hollow_tree_01"
+    },
+    "mist_walk_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The world goes soft-edged and close. Even the footsteps sound wrapped in wool.",
+      "landmark": null,
+      "linger": { "ms": 3500 },
+      "gapM": 10,
+      "next": "hollow_tree_01"
+    },
+    "hollow_tree_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "An old oak has a hollow at shoulder height, dark inside.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Reach in",
+          "effects": {},
+          "next": [
+            { "id": "hollow_acorn_beat", "weight": 90 },
+            { "id": "hollow_rare_beat", "weight": 10 }
+          ]
+        },
+        {
+          "label": "Best not",
+          "effects": {},
+          "next": "pond_stones_01"
+        }
+      ]
+    },
+    "hollow_acorn_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "An acorn, smooth and cold. The tree keeps its other secrets.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "pond_stones_01"
+    },
+    "hollow_rare_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "Something soft — a feather, banded and bright, from no bird you've seen yet.",
+      "landmark": null,
+      "linger": { "ms": 4000 },
+      "gapM": 10,
+      "next": "pond_stones_01"
     },
     "pond_stones_01": {
       "type": "choice",
@@ -88,7 +410,7 @@
         {
           "label": "Keep going",
           "effects": {},
-          "next": "marker_read_01"
+          "next": "whistle_valley_01"
         }
       ]
     },
@@ -99,15 +421,80 @@
       "prompt": "The stone skips once, twice — rings spreading out across the quiet.",
       "landmark": null,
       "linger": { "ms": 3000 },
-      "next": "marker_read_01"
+      "gapM": 10,
+      "next": "cairn_topple_01"
     },
-    "gate_01": {
+    "cairn_topple_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A trail cairn has toppled at the bend.",
+      "landmark": "cairn",
+      "options": [
+        {
+          "label": "Restack the stones",
+          "effects": {},
+          "flags": ["restacked_cairn"],
+          "next": "cairn_restacked_beat"
+        },
+        {
+          "label": "Step around it",
+          "effects": {},
+          "next": "marker_read_01"
+        }
+      ]
+    },
+    "cairn_restacked_beat": {
       "type": "beat",
       "trigger": "distance",
       "biome": "forest",
-      "prompt": "A wooden gate crosses the path, latched against the wind.",
+      "prompt": "Stone by stone, the little tower stands again.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "marker_read_01"
+    },
+    "whistle_valley_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The valley below has the shape of an echo.",
       "landmark": "signpost",
-      "next": "trail_end_01"
+      "options": [
+        {
+          "label": "Whistle into it",
+          "effects": {},
+          "next": [
+            { "id": "echo_beat", "weight": 95 },
+            { "id": "echo_rare_beat", "weight": 5 }
+          ]
+        },
+        {
+          "label": "Keep your breath",
+          "effects": {},
+          "next": "marker_read_01"
+        }
+      ]
+    },
+    "echo_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The note comes back thinner, twice.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "marker_read_01"
+    },
+    "echo_rare_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The note comes back... with one note extra. Far off, something crosses the ridge.",
+      "landmark": null,
+      "linger": { "ms": 4000 },
+      "gapM": 10,
+      "next": "marker_read_01"
     },
     "marker_read_01": {
       "type": "choice",
@@ -124,7 +511,7 @@
         {
           "label": "Walk past",
           "effects": {},
-          "next": "log_rest_01"
+          "next": "bothy_door_01"
         }
       ]
     },
@@ -135,26 +522,38 @@
       "prompt": "'Old Miller's Track — 2 miles.' Someone carved a small bird beneath it.",
       "landmark": null,
       "linger": { "ms": 3500 },
-      "next": "log_rest_01"
+      "gapM": 10,
+      "next": "bothy_door_01"
     },
-    "sunset_pause_01": {
+    "bothy_door_01": {
       "type": "choice",
       "trigger": "distance",
       "biome": "forest",
-      "prompt": "The light has gone long and golden behind the treeline.",
+      "prompt": "A stone shelter sits off the path, door ajar.",
       "landmark": "signpost",
       "options": [
         {
-          "label": "Stop and watch a while",
-          "effects": { "morale": 1 },
-          "next": "pond_stones_01"
+          "label": "Look inside",
+          "effects": {},
+          "flags": ["signed_bothy"],
+          "next": "bothy_beat"
         },
         {
-          "label": "Walk on through the gold",
+          "label": "Leave it be",
           "effects": {},
-          "next": "pond_stones_01"
+          "next": "log_rest_01"
         }
       ]
+    },
+    "bothy_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A guestbook on the sill, half full of names. The hiker adds one and steps back into the light.",
+      "landmark": null,
+      "linger": { "ms": 3500 },
+      "gapM": 10,
+      "next": "log_rest_01"
     },
     "log_rest_01": {
       "type": "choice",
@@ -167,14 +566,90 @@
           "label": "Sit, sip, and watch a while",
           "requires": { "water": 1 },
           "effects": { "water": -1, "energy": 1, "morale": 1 },
-          "next": "gate_01"
+          "next": "dog_stile_01"
         },
         {
           "label": "Keep a good rhythm going",
           "effects": {},
+          "next": "dog_stile_01"
+        }
+      ]
+    },
+    "dog_stile_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A farm dog waits at the stile like it was expecting you.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Let it walk with you",
+          "effects": { "morale": 1 },
+          "next": "dog_along_beat"
+        },
+        {
+          "label": "Send it home",
+          "effects": {},
+          "next": "dog_home_beat"
+        }
+      ]
+    },
+    "dog_along_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "It trots at heel for a while, then peels off home without a word, the way dogs do.",
+      "landmark": null,
+      "linger": { "ms": 3500 },
+      "gapM": 10,
+      "next": "stars_clear_01"
+    },
+    "dog_home_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "It sits, and watches you the whole way to the bend.",
+      "landmark": null,
+      "linger": { "ms": 3000 },
+      "gapM": 10,
+      "next": "stars_clear_01"
+    },
+    "stars_clear_01": {
+      "type": "choice",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The sky has gone impossibly clear.",
+      "landmark": "signpost",
+      "options": [
+        {
+          "label": "Lie back a while",
+          "effects": {},
+          "next": "stars_beat"
+        },
+        {
+          "label": "Keep to the trail",
+          "effects": {},
           "next": "gate_01"
         }
       ]
+    },
+    "stars_beat": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "The dark fills up with stars the longer you look.",
+      "landmark": null,
+      "linger": { "ms": 5000 },
+      "gapM": 10,
+      "next": "gate_01"
+    },
+    "gate_01": {
+      "type": "beat",
+      "trigger": "distance",
+      "biome": "forest",
+      "prompt": "A wooden gate crosses the path, latched against the wind.",
+      "landmark": "signpost",
+      "next": "trail_end_01"
     },
     "trail_end_01": {
       "type": "ending",
