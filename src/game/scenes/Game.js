@@ -11,13 +11,17 @@ import {
 //  The world is 4 horizontal bands (back to front), each scrolling
 //  right-to-left at its own speed — slower = further away (parallax).
 //  Wanda never moves; the world slides past her.
+//  ANCHORING RULE: adjacent bands must OVERLAP, never merely touch. The
+//  path band's grass lip is transparent between blades until its row 14
+//  (screen y=474), so whatever sits behind it must stay opaque through
+//  that zone. mid runs to y=490 (16px buried behind the path); far runs
+//  to y=460 and is covered by mid's continuous understory. A band whose
+//  element bases end AT a boundary will flash background through the lip.
 const LAYERS = [
     { key: 'clouds', top: 30,  height: 180, speed: 6 },
-    //  The far band's bottom sits exactly on the path top, so the ridge
-    //  grounds the horizon and the mid trees stand in front of it —
-    //  its painted haze top dissolves into the matching background sky.
+    //  far's painted haze top dissolves into the matching background sky.
     { key: 'far',    top: 340, height: 120, speed: 14 },
-    { key: 'mid',    top: 320, height: 140, speed: 32 },
+    { key: 'mid',    top: 350, height: 140, speed: 32 },
     { key: 'path',   top: 460, height: 180, speed: 70 }
 ];
 

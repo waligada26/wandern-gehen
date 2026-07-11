@@ -319,3 +319,22 @@ already earned during the placeholder build:
 - **v3 fills ~92% of the asked size** (C's figure is 59px tall in a
   64px request). Fine here — but if exact fill matters, ask a size
   notch larger and crop.
+- **Layer prompts must state their §3 depth row EXPLICITLY** (the
+  saturation %, cooled hue, outline weight, clusters-only, continuous
+  mass) or the generator defaults to foreground treatment. The first
+  A3 delivered full-saturation outlined standalone trees with grass
+  mounds; the regen that spelled out "MID-DISTANCE … 75 percent
+  saturation, hue cooled … no interior detail … continuous mass …
+  shadowed understory fading to dark" nailed the row first try.
+- **Band-overlap anchoring rule** (engine + art contract): adjacent
+  parallax bands must OVERLAP, never merely touch. The path band's
+  grass lip is transparent between blades for its top ~14 rows, so
+  the band behind it must stay opaque through that zone — mid now
+  runs 16px past the path top (to y=490) and its bottom ~30 texture
+  rows are continuous opaque understory. Element bases that end
+  exactly at a band boundary flash background through the lip.
+- **Wide strips come back with PAINTED skies** despite "transparent
+  background" — the path had sky-color margins top AND bottom, the
+  treeline an opaque 2-tone sky with cloud blobs. They're always a
+  couple of flat tones: sample and chroma-key, then verify per-row
+  opacity before shipping.
