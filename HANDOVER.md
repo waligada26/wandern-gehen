@@ -57,9 +57,9 @@ tag/spec authority), NOTES.md (parked backlog).
 1. **Phone-verify the whole backlog above** — especially two
    back-to-back hikes for variety + calm.
 2. **The ART PASS chapter is open** — work ART-QUEUE.md strictly top
-   to bottom, starting at GATE 0 (Pixel Lab MCP smoke test), then
-   GATE 1 (the hiker / style lock, against ART-BIBLE.md). Engine and
-   content parks wait in NOTES.md; the setting→scenery park gets
+   to bottom. GATE 0 (Pixel Lab MCP smoke test) PASSED 11 Jul; next
+   is GATE 1 (the hiker / style lock, against ART-BIBLE.md). Engine
+   and content parks wait in NOTES.md; the setting→scenery park gets
    pulled forward by ART-QUEUE's A1 decision at the latest by
    Section D.
 3. Music remains the parallel track (Jimmy composes stems → Tone.js
@@ -70,6 +70,9 @@ tag/spec authority), NOTES.md (parked backlog).
 - iPhone audio fix still untested on the phone (deployed since S9).
 - Stray repo `caniplantit42/wandern-gehen` still awaiting manual
   deletion in the browser. Never touch that account.
-- Pixel Lab art pass still parked until the game is proven fun.
+- The art chapter is OPEN (the old "parked until proven fun" gate is
+  behind us): ART-QUEUE GATE 0 passed 11 Jul 2026 — Pixel Lab MCP →
+  PNG → Phaser verified end-to-end. Next queue line: GATE 1 (the
+  hiker), on Jimmy's word.
 - Save compatibility: all of today's fields (flags, spine) ride
   reader-side defaults — old saves load fine; SAVE_VERSION is still 1.

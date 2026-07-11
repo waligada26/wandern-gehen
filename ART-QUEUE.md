@@ -31,10 +31,13 @@ the end of BUILD-SESSIONS.md.
 
 ## GATE 0 — PIPELINE SMOKE TEST
 
-- [ ] **G0**: one throwaway sprite via the Pixel Lab MCP from Claude
+- [x] **G0**: one throwaway sprite via the Pixel Lab MCP from Claude
   Code → lands as a PNG in `public/assets/` → loads and renders in
   Phaser on the dev server. Any subject; it will be deleted.
   **Nothing below starts until this passes.**
+  *(Passed 11 Jul 2026 — a 64×64 mushroom via `create_map_object`,
+  served and loaded through the same path Wanda's PNGs use; sprite
+  and temp code deleted after verification. See LEARNINGS.)*
 
 ## GATE 1 — STYLE LOCK
 
@@ -245,5 +248,28 @@ already earned during the placeholder build:
   cuts it.
 - **Whole pixels only when scrolling** (`Math.round` on offsets) keeps
   the grid crisp — art with 1px details survives; sub-pixel art won't.
-- (add Pixel Lab prompt phrasings, hit-rates, and rejection reasons
-  here as GATE 0/1 discover them)
+- **GATE 0 (11 Jul 2026) — the pipeline works end-to-end.** Exact call:
+  `create_map_object` with `description: "a small forest mushroom, red
+  cap with pale spots"`, `view: "side"`, `width: 64`, `height: 64`,
+  defaults elsewhere (`detail: "medium detail"`, `shading: "medium
+  shading"`, `outline: "single color outline"`). Completed first try in
+  well under a minute; output was a clean 64×64 PNG with a transparent
+  background, fetched from a `download` URL in the `get_map_object`
+  result.
+- **Billing is generation-counted, not dollar-metered**: `get_balance`
+  showed $0.00 credits but an active Tier 1 subscription (2,000
+  generations/month; 1,695 remaining at test time). One
+  `create_map_object` call = 1 generation.
+- **⚠️ `create_1_direction_object` burns 20–40 generations per call** —
+  it produces candidate *batches* sized by pixel dimensions (≤42px → 64
+  candidates, ≤85 → 16, ≤170 → 4). Right tool for a deliberate
+  exploration (GATE 1's hiker candidates); wrong tool for a single
+  sprite. `create_map_object` is the cheap single-shot.
+- **Server-side results auto-delete after 8 hours** — download the PNG
+  into the repo immediately, never park an asset on their servers.
+- **Windows curl needs `--ssl-no-revoke`** for api.pixellab.ai
+  downloads (schannel fails its certificate-revocation check
+  otherwise; the cert itself still validates).
+- `create_map_object` also has a style-matching mode (`background_image`
+  + inpainting) and a `"selective outline"` option — both relevant from
+  GATE 1 on (ART-BIBLE §5 wants selective colored outlines).
