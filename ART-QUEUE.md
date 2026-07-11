@@ -273,3 +273,11 @@ already earned during the placeholder build:
 - `create_map_object` also has a style-matching mode (`background_image`
   + inpainting) and a `"selective outline"` option — both relevant from
   GATE 1 on (ART-BIBLE §5 wants selective colored outlines).
+- **Characters vs map objects (G1 stage 1):** map-object stills CANNOT
+  be animated — anything that will ever move must be born through
+  `create_character`, even when only east-facing is needed.
+  `create_character` v3 (highest quality) returns 8 rotations on a
+  roomy 120–128px transparent canvas with the figure at true 64px
+  density (animation headroom — crop losslessly, never scale). Cost:
+  2 generations per v3 character at 64px; a template walk cycle
+  (`animate_character`, one direction) is 1 more.

@@ -15,7 +15,10 @@ export class Camp extends Scene
 
     preload ()
     {
-        this.load.image('wanda-stand', 'assets/wanda-stand-east.png');
+        //  GATE 1 trial: same hiker switch as Game.js (?hiker=old = placeholder).
+        const oldHiker = new URLSearchParams(window.location.search).get('hiker') === 'old';
+        this.load.image('wanda-stand',
+            oldHiker ? 'assets/wanda-stand-east.png' : 'assets/wanda-c-stand-east.png');
     }
 
     create ()
