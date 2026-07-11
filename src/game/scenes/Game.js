@@ -8,25 +8,24 @@ import {
     playDecisionChime, playArrivalChime, playSightingSting
 } from '../audio';
 
-//  The world is 4 horizontal bands (back to front), each scrolling
-//  right-to-left at its own speed — slower = further away (parallax).
-//  Wanda never moves; the world slides past her.
-//  ANCHORING RULE: adjacent bands must OVERLAP, never merely touch. The
-//  path band's grass lip is transparent between blades until its row 14
-//  (screen y=474), so whatever sits behind it must stay opaque through
-//  that zone. mid runs to y=490 (16px buried behind the path); far runs
-//  to y=460 and is covered by mid's continuous understory. A band whose
-//  element bases end AT a boundary will flash background through the lip.
+//  The world is a shallow ¾ view (ART-BIBLE §8): beyond-horizon layers
+//  (sky, far hills, horizon treeline) keep their parallax speeds; below
+//  HORIZON one ground plane recedes upward, and everything planted on
+//  it — trees, tufts, landmarks — rides the plane at the plane's speed.
+//  Depth on the plane = vertical row + overlap (painter's algorithm):
+//  rows above the trail draw behind Wanda, rows below draw in front
+//  (see propDepth). Wanda never moves; the world slides past her.
+//  ANCHORING RULE (still true in ¾): bands OVERLAP, never merely touch —
+//  the plane buries the treeline's understory and the hills' bottom.
+const HORIZON = 190;
 const LAYERS = [
-    { key: 'clouds', top: 30,  height: 180, speed: 6 },
+    { key: 'clouds', top: 26,  height: 180, speed: 6 },
     //  far's painted haze top dissolves into the matching background sky.
-    { key: 'far',    top: 340, height: 120, speed: 14 },
-    { key: 'mid',    top: 350, height: 140, speed: 32 },
-    { key: 'path',   top: 460, height: 180, speed: 70 },
-    //  A4.5 near-foreground overlay: sparse tufts/ferns that brush PAST
-    //  the hiker — the only band in front of her. depth 12: above Wanda
-    //  (10) and the worn hat (11), below the day-wash (15) so it tints.
-    { key: 'overlay', top: 462, height: 60, speed: 91, depth: 12 }
+    { key: 'far',    top: 70,  height: 120, speed: 14 },
+    //  horizon treeline: ~70px of canopy shows above HORIZON; the plane
+    //  covers everything below it.
+    { key: 'mid',    top: 120, height: 140, speed: 32 },
+    { key: 'plane',  top: HORIZON, height: 450, speed: 70 }
 ];
 
 //  Every scenery texture is TEX_W wide and tiles seamlessly. The painted
@@ -34,10 +33,25 @@ const LAYERS = [
 //  duplicated across the wrap point, continuous strips are edge-matched.
 const TEX_W = 360;
 
-const GROUND_Y = 478;       // where feet sit on the path band
+//  --- planted props: the plane's dressing (mock art for Stage M) ---
+//  Each type plants at a random row in its band. Nearer rows use bigger
+//  source sprites — the scale illusion without ever scaling pixels.
+//  Rows below the trail render in front of Wanda (see propDepth).
+const PROP_TYPES = [
+    { key: 'wood-tree-small', rows: [215, 300], weight: 12 },
+    { key: 'wood-tree-med',   rows: [295, 390], weight: 14 },
+    { key: 'wood-tree-group', rows: [385, 445], weight: 7 },
+    { key: 'wood-tuft',       rows: [508, 600], weight: 26 },
+    { key: 'wood-fern',       rows: [508, 600], weight: 12 }
+];
+//  Walked meters between plantings — the average of two rolls, like the
+//  landmark gaps, so medium spacing is common and extremes are rare.
+const PROP_GAP_M = { floor: 1.2, roll: 5 };
+
+const GROUND_Y = 478;       // Wanda's row: where feet sit on the trail strip
 const WANDA_X = 110;
 
-const PATH_SPEED = LAYERS[3].speed;   // world speed at Wanda's feet, px/s
+const PATH_SPEED = LAYERS[3].speed;   // the plane's speed = speed at Wanda's feet, px/s
 const WALK_MPS = 1.4;                 // hiking pace ≈ 5 km/h; the distance clock's rate
 
 //  Landmark spacing (GAME-DESIGN.md → Timing): a hard floor so stretches of
@@ -142,18 +156,24 @@ export class Game extends Scene
             frameWidth: 64,
             frameHeight: 64
         });
-        //  The woodland parallax layers (Section A) — painted art, one set
-        //  per setting eventually; the spine's virtual setting picks the
-        //  set from Section D on.
+        //  Beyond-horizon layers (Section A) — painted art, one set per
+        //  setting eventually; the spine's virtual setting picks the set
+        //  from Section D on. The ground plane itself is code-painted
+        //  until Stage N of the ¾ recomposition.
         this.load.image('clouds', 'assets/wood-clouds.png');
         this.load.image('far', 'assets/wood-far.png');
         this.load.image('mid', 'assets/wood-mid.png');
-        this.load.image('path', 'assets/wood-path.png');
-        this.load.image('overlay', 'assets/wood-overlay.png');
+        //  Planted-prop textures (mock: iteration-1 trees + tuft/fern).
+        this.load.image('wood-tree-small', 'assets/wood-tree-small.png');
+        this.load.image('wood-tree-med', 'assets/wood-tree-med.png');
+        this.load.image('wood-tree-group', 'assets/wood-tree-group.png');
+        this.load.image('wood-tuft', 'assets/wood-tuft.png');
+        this.load.image('wood-fern', 'assets/wood-fern.png');
     }
 
     create ()
     {
+        this.paintPlane();
         this.paintSignpost();
         this.paintCairn();
         this.paintStream();
@@ -181,6 +201,17 @@ export class Game extends Scene
         });
         this.wanda = this.add.sprite(WANDA_X, GROUND_Y, 'wanda-walk').setOrigin(0.5, 1).setDepth(10);
         this.wanda.play('walk');
+
+        //  Planted props: decorative dressing on the plane — deliberately
+        //  NOT persisted (a reload replants; nothing gameplay-visible).
+        //  Pre-seeded across and beyond the screen so the plane never
+        //  starts bare.
+        this.props = [];
+        this.nextPropAtM = 0;
+        for (let x = 30; x < 700; x += 55 + Math.random() * 95)
+        {
+            this.spawnProp(x);
+        }
 
         //  The lucky hat rides just above her head when worn.
         this.hatSprite = this.add.image(WANDA_X + 7, GROUND_Y - 57, 'hat')
@@ -362,7 +393,7 @@ export class Game extends Scene
             const texture = this.textures.exists(node.landmark) ? node.landmark : 'signpost';
             this.landmark = this.add.image(TEX_W + 40, GROUND_Y + 4, texture)
                 .setOrigin(0.5, 1)
-                .setDepth(5);
+                .setDepth(this.propDepth(GROUND_Y + 4));
             this.landmarkArmed = true;
         }
 
@@ -379,6 +410,25 @@ export class Game extends Scene
             {
                 this.landmark.destroy();
                 this.landmark = null;
+            }
+        }
+
+        //  Props ride the plane: same speed, same direction, culled off
+        //  the left edge. New plantings roll on walked meters.
+        if (this.distanceM >= this.nextPropAtM)
+        {
+            this.spawnProp();
+            this.nextPropAtM = this.distanceM + PROP_GAP_M.floor
+                + (Math.random() + Math.random()) / 2 * PROP_GAP_M.roll;
+        }
+        for (let i = this.props.length - 1; i >= 0; i--)
+        {
+            const prop = this.props[i];
+            prop.x -= PATH_SPEED * scale * dt;
+            if (prop.x < -100)
+            {
+                prop.destroy();
+                this.props.splice(i, 1);
             }
         }
 
@@ -741,6 +791,33 @@ export class Game extends Scene
         //  Advance through the same funnel as a card resolution — effects
         //  were already applied when the hold began.
         this.advanceTo(node.next);
+    }
+
+    //  --- planted props: the ¾ plane's dressing ---
+
+    //  Depth from plane row (painter's algorithm). Rows above the trail
+    //  sort behind Wanda (10); the trail row and below sort in front of
+    //  her and the worn hat (12+), still beneath the day-wash (15).
+    //  Landmarks route through this too, so overlaps stay row-correct.
+    propDepth (y)
+    {
+        return y < GROUND_Y
+            ? 5 + (y - HORIZON) / 1000
+            : 12 + (y - HORIZON) / 1000;
+    }
+
+    spawnProp (x = TEX_W + 90)
+    {
+        const total = PROP_TYPES.reduce((sum, t) => sum + t.weight, 0);
+        let roll = Math.random() * total;
+        const type = PROP_TYPES.find(t => (roll -= t.weight) <= 0)
+            || PROP_TYPES[PROP_TYPES.length - 1];
+        const y = Math.round(type.rows[0] + Math.random() * (type.rows[1] - type.rows[0]));
+        this.props.push(
+            this.add.image(Math.round(x), y, type.key)
+                .setOrigin(0.5, 1)
+                .setDepth(this.propDepth(y))
+        );
     }
 
     //  --- rare encounters ---
@@ -1138,6 +1215,73 @@ export class Game extends Scene
     }
 
     //  --- placeholder texture painters (chunky shapes on the pixel grid) ---
+
+    //  The ground plane (Stage M mock): grass receding to the horizon
+    //  with a worn trail strip at Wanda's row. Speckle detail shrinks
+    //  toward the horizon (the ¾ cue); every element wraps at TEX_W.
+    //  Local rows are global minus HORIZON: the trail (global 452..502)
+    //  is local 262..312.
+    paintPlane ()
+    {
+        const g = this.add.graphics();
+        //  grass, hazier/paler toward the horizon — many close steps so
+        //  no single band edge reads as a line
+        const grassSteps = [
+            [0x96b26f, 0, 35], [0x8fac68, 35, 40], [0x88a662, 75, 45],
+            [0x82a15c, 120, 50], [0x7c9b56, 170, 55], [0x769551, 225, 60],
+            [0x71914d, 285, 75], [0x6d8d49, 360, 90]
+        ];
+        for (const [color, top, h] of grassSteps)
+        {
+            g.fillStyle(color); g.fillRect(0, top, TEX_W, h);
+        }
+        //  dark grass speckles: sparse and small high, chunkier low
+        g.fillStyle(0x5d7c42);
+        const zones = [
+            { size: 2, pts: [[30, 18], [110, 40], [200, 12], [280, 34], [340, 22], [70, 48], [250, 46]] },
+            { size: 3, pts: [[54, 78], [150, 108], [236, 70], [318, 122], [20, 118], [190, 92], [300, 82]] },
+            { size: 4, pts: [[40, 160], [130, 210], [222, 148], [312, 236], [80, 246], [270, 190], [180, 252], [346, 168]] },
+            { size: 5, pts: [[60, 336], [160, 392], [252, 340], [330, 420], [24, 408], [210, 430], [110, 358], [290, 380]] }
+        ];
+        for (const zone of zones)
+        {
+            for (const [x, y] of zone.pts)
+            {
+                for (const dx of [0, -TEX_W])
+                {
+                    g.fillRect(x + dx, y, zone.size, Math.max(2, zone.size - 1));
+                }
+            }
+        }
+        //  a few sunlit blades low on the plane
+        g.fillStyle(0xa9c47e);
+        for (const [x, y] of [[90, 370], [240, 414], [30, 330], [310, 396], [150, 438]])
+        {
+            for (const dx of [0, -TEX_W]) g.fillRect(x + dx, y, 4, 3);
+        }
+        //  the worn trail: ragged dirt band, edges waving on whole periods
+        g.fillStyle(0xc49a66);
+        for (let x = 0; x < TEX_W; x += 4)
+        {
+            const top = 262 + Math.round((3 * Math.sin(x * Math.PI * 2 / 40) + 2 * Math.sin(x * Math.PI * 2 / 24 + 1)) / 2) * 2;
+            const bottom = 312 + Math.round((3 * Math.sin(x * Math.PI * 2 / 45 + 2) + 2 * Math.sin(x * Math.PI * 2 / 30)) / 2) * 2;
+            g.fillRect(x, top, 4, bottom - top);
+        }
+        //  lighter packed centre + a few pebbles
+        g.fillStyle(0xd6b57e);
+        for (let x = 0; x < TEX_W; x += 4)
+        {
+            const top = 276 + Math.round(2 * Math.sin(x * Math.PI * 2 / 60 + 1));
+            g.fillRect(x, top, 4, 22);
+        }
+        g.fillStyle(0xa67c4e);
+        for (const [x, y] of [[44, 288], [128, 296], [212, 282], [296, 292], [340, 300], [80, 302], [180, 306], [260, 286]])
+        {
+            for (const dx of [0, -TEX_W]) g.fillRect(x + dx, y, 5, 3);
+        }
+        g.generateTexture('plane', TEX_W, 450);
+        g.destroy();
+    }
 
     //  A trailside signpost, ~32×46 on the shared pixel grid (landmarks are
     //  small props — see ART-STYLE.md).

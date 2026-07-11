@@ -98,6 +98,13 @@ A layer that violates its row (a fully-saturated far mountain, an
 outlined distant ridge) will pop forward and flatten the scene —
 regenerate it.
 
+**¾-view addendum:** on the ground plane, depth = vertical position +
+overlap: props on rows above the trail render behind the hiker, rows
+below render in front. The plane and everything planted on it scroll
+at ONE speed. The temperature/saturation recipe above governs the
+beyond-horizon layers (hills, horizon treeline, sky), which keep
+their parallax speeds.
+
 ## 4. Foliage (clustered blobs)
 
 - Canopies and bushes are built from **rounded clumps**: a light
@@ -147,8 +154,10 @@ regenerate it.
   look in the reference set is a different game's voice — steal its
   *composition*, framing trees and reflective water bands, never its
   colors).
-- No top-down/¾ perspective — the game is a side-view band. Top-down
-  references are texture studies only.
+- The world uses a **shallow ¾ view** — a visible ground plane
+  receding upward, elements planted on it (GBA Mana-era convention).
+  Pure top-down remains out. Characters and critters stay side-view
+  sprites; they read correctly on the ¾ plane.
 - No pure black or pure white pixels.
 - No harsh contrast or horror-adjacent darkness — every scene must
   pass the "restful to glance at" test (README → Calm).
