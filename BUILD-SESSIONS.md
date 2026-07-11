@@ -132,6 +132,8 @@ Sessions are mostly sequential. A few marked *(may spill into two sittings)* are
 
 ## Then: the art pass
 
+**The art pass runs from ART-QUEUE.md** — the ordered, no-time-boxing queue that supersedes the sketch below.
+
 Only now do you open Pixel Lab. Because every slot already works on placeholders, this is low-risk **skinning** you can pace to your budget — stop whenever it looks good enough.
 
 1. **Design the hiker first** — it's your style anchor (locks resolution + palette + reference). Walk cycle + one stand pose, right-facing side view only.
