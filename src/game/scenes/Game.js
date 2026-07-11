@@ -124,16 +124,10 @@ export class Game extends Scene
 
     preload ()
     {
-        //  GATE 1 trial (ART-QUEUE G1): candidate C is the default hiker;
-        //  ?hiker=old walks the placeholder for comparison. The switch is
-        //  removed at the style lock.
-        const oldHiker = new URLSearchParams(window.location.search).get('hiker') === 'old';
         //  Standing pose (map in hand) — used when she pauses at landmarks.
-        this.load.image('wanda-stand',
-            oldHiker ? 'assets/wanda-stand-east.png' : 'assets/wanda-c-stand-east.png');
+        this.load.image('wanda-stand', 'assets/wanda-stand-east.png');
         //  8-frame walk cycle, one 64×64 frame per step position.
-        this.load.spritesheet('wanda-walk',
-            oldHiker ? 'assets/wanda-walk-east.png' : 'assets/wanda-c-walk-east.png', {
+        this.load.spritesheet('wanda-walk', 'assets/wanda-walk-east.png', {
             frameWidth: 64,
             frameHeight: 64
         });

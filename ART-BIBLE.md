@@ -7,8 +7,11 @@
 >
 > Locked 11 July 2026 from an eight-image reference study. Companion to
 > ART-STYLE.md (the pipeline); this doc is the *aesthetic contract*.
-> Status: **rules locked; palette hexes are starting points until the
-> hiker is chosen** (see §9 — the winning hiker finalizes the ramps).
+> Status: **rules locked; the hiker is locked (G1, 11 Jul 2026 —
+> `art-reference/wanda-reference.png`)**. §2 now carries the ramps
+> extracted from her sprite; families she doesn't contain (greens,
+> earth, water, sky) stay starter values until Section A's layers
+> lock them against her warmth.
 
 ---
 
@@ -31,7 +34,28 @@
 The world is saturated but soft. Nothing neon, nothing muddy, **no pure
 black (#000), no pure white (#FFF)** anywhere.
 
-Starter ramps (approximate — finalize from the winning hiker, §9):
+**Locked from the hiker (G1, 11 Jul 2026).** Cluster centers extracted
+from the shipped sprite (`wanda-stand-east.png` + walk sheet). Note the
+v3-reality caveat: generated sprites are micro-shaded (thousands of
+near-duplicate hexes), so these are representative anchors, not a
+literal color count — see ART-QUEUE LEARNINGS.
+
+| Family (locked) | Ramp (dark → light) | Source on Wanda |
+|---|---|---|
+| Near-black floor | `#05090a` (the darkest pixel family — never #000) | outlines, pack darks |
+| Cool shadow | `#151a28 → #2f2d4f → #4c5469 → #5a6770` | shadow sides, headphones, grays |
+| Warm light / amber | `#f79310 → #fdac12` | blonde hair, lit highlights |
+| Skin | `#fab789 → #fec89b → #fccfab` | face, arms, legs |
+| Signature orange | `#f24f2f → #f67551 → #f98f69` | the sleeveless top |
+| Deep warm red | `#2b0c0c → #940f49 → #a90d48` | the pack |
+| Denim blue | `#122d50 → #2f4f70 → #3571b3` | shorts, blue accents |
+
+Every future asset shades toward these anchors: highlights lean into
+the amber family, shadows into the cool-shadow family, and the darkest
+step anywhere is the `#05090a` floor.
+
+Starter ramps for the families the hiker doesn't contain (greens,
+earth, water, sky — approximate until Section A locks them):
 
 | Family | Ramp (dark → light) | Used for |
 |---|---|---|
@@ -40,8 +64,11 @@ Starter ramps (approximate — finalize from the winning hiker, §9):
 | Earth | `#5a3a2a → #8a5a3a → #c08552 → #e8c39a` | trunks, rock, path, sand |
 | Water | `#1a5a6a → #2a8a9a → #4ec4c4 → #a8e8e0` | streams, ponds, sea |
 | Sky (day) | `#4a90c2 → #7ab8dd → #cfe8f0` | sky gradient, distant haze |
-| Cool shadow | `#3a3a5e → #5a5a8a → #8a8ab8` | far mountains, all shadow tinting |
-| Warm light | `#f0d890 → #f5b86a → #e8845a` | highlights, golden-hour wash targets |
+
+(The old starter rows for cool shadow and warm light are superseded by
+the locked table above — far mountains and shadow tinting key off the
+locked cool-shadow ramp; golden-hour wash targets key off the locked
+amber family.)
 
 Rules of use:
 
@@ -100,9 +127,10 @@ regenerate it.
 
 - Default state: **soft daylight**, sun high and slightly warm.
 - The golden-hour/dusk mood is a **palette state, not an asset set**:
-  the engine's day-wash tint shifts the scene toward the warm-light
-  ramp (`#f5b86a → #e8845a` highlights, violet-deepened shadows).
-  Never generate separate sunset variants of layers.
+  the engine's day-wash tint shifts the scene toward the locked amber
+  family (`#f79310 → #fdac12` highlights, violet-deepened shadows via
+  the locked cool-shadow ramp). Never generate separate sunset
+  variants of layers.
 - Consequence for generation: author all layers in neutral daylight so
   the wash has a clean base to tint.
 - NOTE: the current day-wash is a multiply tint, which can only darken

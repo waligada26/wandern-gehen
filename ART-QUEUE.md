@@ -41,7 +41,7 @@ the end of BUILD-SESSIONS.md.
 
 ## GATE 1 — STYLE LOCK
 
-- [~] **G1**: **the hiker (Wanda)** — 64×64, right-facing only:
+- [x] **G1**: **the hiker (Wanda)** — 64×64, right-facing only:
   8-frame walk cycle (512×64 sheet, replaces
   `assets/wanda-walk-east.png`) + one standing pose (64×64, replaces
   `assets/wanda-stand-east.png`). **Explicitly an exploration**:
@@ -50,6 +50,11 @@ the end of BUILD-SESSIONS.md.
   palette + reference image are locked AND the hiker walks in the
   deployed build. Save the reference image into the repo
   (`art-reference/`) — every later prompt cites it.
+  *(Locked 11 Jul 2026 — candidate C "high contrast", chosen from
+  four rendering directions, phone-walked in the deployed build.
+  Reference: `art-reference/wanda-reference.png`; ART-BIBLE §2 ramps
+  updated from her extracted clusters. Total gate cost: 9
+  generations. See LEARNINGS.)*
 
 ── everything below this line generates against the reference ──
 
@@ -281,3 +286,36 @@ already earned during the placeholder build:
   density (animation headroom — crop losslessly, never scale). Cost:
   2 generations per v3 character at 64px; a template walk cycle
   (`animate_character`, one direction) is 1 more.
+- **G1 keeper recipe** (candidate C): `create_character` v3, `view:
+  "side"`, `size: 64`, `outline: "selective outline"`, `detail:
+  "medium detail"`; prompt = fixed character description + §11
+  ingredients + "strong warm golden sunlight with deep cool blue-violet
+  shadows, high contrast rendering, bold crisp selective colored
+  outlines". **Keep the character id** —
+  `e3e8a31f-824b-490a-add9-4cc0d2d1e895` — future poses/animations
+  (Section G's drinking/sitting/picking-up) animate THIS character,
+  not a new generation.
+- **Hit-rate:** 4/4 candidates usable and mostly on-model at 64px;
+  1/4 chosen. Prompt scars: "over-ear headphones around her neck" is
+  fragile (B grew head-gear instead); `detail: "high detail"` +
+  "finely rendered" drifted hair color and swallowed the face (D);
+  "soft muted" lost the red-pack identity anchor (A). Saying
+  **"charcoal" instead of "black"** worked — zero pure-#000 pixels
+  across all four candidates.
+- **v3 output is micro-shaded**: ~6,000 distinct hexes across the nine
+  Wanda frames — it *reads* as clean pixel art but is not literally
+  palette-limited. Consequences: (1) palette extraction = clustering,
+  not color-listing (ART-BIBLE §2's locked ramps are cluster centers);
+  (2) ART-BIBLE's short-ramps rule governs *authored/tintable* art —
+  don't reject v3 sprites for hex-count; (3) micro-shaded painted art
+  and multiply-tints don't mix, which weighs on the A1 decision.
+- **Walk template `walking-8-frames`** (east only, 1 generation) was a
+  first-try keeper: 8 frames at 64px density, clean contact poses.
+- **The lossless assembly recipe**: union the opaque bounding boxes of
+  all frames + the stand, cut ONE shared 64×64 window (bottom-aligned
+  to the union's lowest row so feet pin to the sprite bottom,
+  horizontally centered) — walking and standing stay perfectly
+  aligned, and no pixel is ever scaled.
+- **v3 fills ~92% of the asked size** (C's figure is 59px tall in a
+  64px request). Fine here — but if exact fill matters, ask a size
+  notch larger and crop.
