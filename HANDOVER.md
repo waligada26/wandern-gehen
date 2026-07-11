@@ -56,13 +56,12 @@ tag/spec authority), NOTES.md (parked backlog).
 
 1. **Phone-verify the whole backlog above** — especially two
    back-to-back hikes for variety + calm.
-2. Then pick from NOTES.md's parked list; natural candidates:
-   **(a)** the time-of-day read side (small session: expose the
-   day-wash phase, gate sunset/stars back in, fill stars' reserved
-   closing slot — TODO comment sits in spine.js pickDeal), or
-   **(b)** author more every_hike_ok segments to clear the standing
-   warning, or **(c)** virtual setting → scenery palette (the locked
-   end-state; also moves the creature-journal biome tag).
+2. **The ART PASS chapter is open** — work ART-QUEUE.md strictly top
+   to bottom, starting at GATE 0 (Pixel Lab MCP smoke test), then
+   GATE 1 (the hiker / style lock, against ART-BIBLE.md). Engine and
+   content parks wait in NOTES.md; the setting→scenery park gets
+   pulled forward by ART-QUEUE's A1 decision at the latest by
+   Section D.
 3. Music remains the parallel track (Jimmy composes stems → Tone.js
    replaces the placeholder synths).
 

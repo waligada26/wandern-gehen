@@ -1,9 +1,12 @@
 # CONTENT INVENTORY — read-only report
 
-**Last regenerated: 11 July 2026** (spine build session 1), from the
-live `src/game/content.json`, cross-checked against Game.js + spine.js.
-Validator at load: **0 warnings; 46 nodes in 20 segments, full
-coverage; 42 `@exit` pointers.** Regenerate after content changes.
+**Last verified: 11 July 2026** (chapter-close handover; content
+unchanged since the spine sessions), against the live
+`src/game/content.json`, Game.js, and spine.js. Validator at load:
+**46 nodes in 20 segments, full coverage, 42 `@exit` pointers, and
+exactly ONE intentional warning** (7 repeatable deck segments < max
+targetDeals 14 — the authoring signal, see "How the trail flows").
+Regenerate after content changes.
 
 ## Summary counts
 

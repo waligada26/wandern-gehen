@@ -1,94 +1,84 @@
 # NOTES — ideas parked for later (not the current session)
 
-## Art-pass: reactive poses for Wanda (Jimmy, after Session 6)
+## ═══ CHAPTER MARKER — 11 July 2026 ═══
 
-Stops currently all use the same standing pose. Pixel Lab has template
-animations that match our existing stops, ~1 generation each (east only):
+**State of the game:** the procedural spine is DONE and machine-verified
+— every hike is a shuffled deal (opener → fork at 2–3 → dealt middle,
+targetDeals 8–14 → gate ending) under SEGMENT-TABLE's rules 1–7, over
+46 nodes / 20 segments with weighted rares, flags, and weather timers.
+Everything runs on placeholder art. Saves are compatible throughout
+(SAVE_VERSION still 1). Nothing since the Session 8 push is
+phone-verified — that backlog lives in HANDOVER.md.
 
-- `drinking` / `crouching` — filling or sipping the canteen at streams
-- `picking-up` — the lucky hat pickup (and future item pickups)
-- `breathing-idle` — a softer default stand for long pauses / camp
-- sitting pose — the mossy-log rest (check template list for a fit)
+**The next chapter is the ART PASS**, worked strictly from ART-QUEUE.md
+starting at **GATE 0** (Pixel Lab MCP smoke test), then GATE 1 (the
+hiker / style lock, against ART-BIBLE.md).
 
-Wire-up is small: play the pose instead of `wanda-stand` while the card is
-open, keyed off the node/option (could be a `pose` field in content.json).
+**Expect at load, always:** exactly one validator warning — "dealable
+deck has only 7 repeatable segments" — the authoring signal, not a bug.
 
-## Art-pass: making branches visible
-
-Path choices read as invisible until biomes exist — the branch's payoff is
-the scenery changing (forest → alpine, etc.). Optional extra: a "fork"
-landmark set-piece where the trail visibly splits. Scenery-change is the
-important half.
-
-## Art-pass: per-biome lazy loading (from Session 8's list)
-
-Deferred because placeholder art is painted in code — there's nothing to
-stream yet. When real biome layer PNGs exist, load only the first biome +
-Wanda up front and fetch later biomes during the walk (Phaser's loader can
-run mid-scene). The service worker will cache them after first fetch.
-
-## Parked from the world-texture session (11 July 2026)
-
-TODO(parked) backlog — each is the deliberately-cut half of a stop that
-shipped. Flags/weights below already exist in the data; these are their
-future payoffs.
-
-- **cairn_topple_01 B:** stepping around the toppled cairn later flavors
-  the next junction's prompt (needs the flag READ side).
-- **glove_fencepost_01:** the glove is gone from the fencepost on a later
-  hike if you hung it (`hung_glove` — needs flag read side).
-- **litter_packet_01 B:** tumbling-follower visual — the packet blows
-  along the path with you for a stretch.
-- **hollow_rare_beat:** wire the banded feather into the Session 6
-  journal as a findable.
-- **whistle_valley_01 / echo_rare_beat:** extra-note audio one-shot +
-  distant-shape sprite crossing the ridge.
-- **bothy_door_01:** guestbook that visibly fills across hikes
-  (`signed_bothy` count, not just a boolean).
-- **dog_stile_01 A:** follower sprite — the dog actually trots at heel.
-- **butterfly_pack_01 A:** walk-speed softening + riding butterfly sprite
-  while "walking gently".
-- **mist_valley_01 B:** fog overlay + muffled audio filter inside the
-  mist.
-- **stars_clear_01 / stars_beat:** future home of the shooting-star rare
-  roll; condition the whole stop on time-of-day once the day-wash phase
-  is readable by content/engine decisions (ENGINE-STATE §8).
-- **painted_sign_01 A:** a real detour segment once a spine exists
-  (`trusted_sign` flag already set).
-- **Engine — flags read side:** conditional prompts and flag-based
-  requires; every flag above is write-only until this lands.
-- **Engine — weights:** all weighted-next numbers are placeholders; real
-  rarity tuning is Session 6.
-- **Engine — gapM feel:** follow-up beats land ~10s after the tap at
-  gapM 10 (7s walk + ~3s landmark scroll-in). If that should feel more
-  immediate, drop gapM to ~1–3 (scroll-in sets a ~3s floor).
-
-## Parked after the dealer landed (11 July 2026, spine session 2)
-
-The dealer (rules 1–7, skeleton, targetDeals, setting ring, exhaustion
-ladder) is DONE — spine.js. Still parked:
+## ENGINE PARKS
 
 - **Time-of-day read side** — the small session that brings seg_sunset
   and seg_stars back: expose the day-wash phase, gate their sky needs,
-  and fill stars' reserved closing slot (TODO comment in spine.js
-  pickDeal).
+  fill stars' reserved closing slot (TODO comment in spine.js
+  pickDeal). Also the home of the golden-hour blend fix: the wash is
+  alpha-blend (no additive glow); a warm brightening needs
+  screen/overlay (ART-BIBLE §7 NOTE).
 - **Virtual setting drives scenery** — the locked end-state: the
   spine's setting replaces the meter-based biome palette cycle as the
-  one authority on where you are. Until then the tint and the tags can
-  disagree (placeholder art hides it).
-- **Creature journal biome tag** — meetCreature still reads the
-  upcoming node's `biome`; move to the spine's virtual setting when it
-  becomes the authority.
+  one authority on where you are. ART-QUEUE's A1 decision point;
+  needed by Section D at the latest.
+- **Creature journal biome tag** — meetCreature reads the upcoming
+  node's `biome`; move to the spine's virtual setting when it becomes
+  the authority.
+- **Flags read side** — conditional prompts and flag requires; all
+  five flags (hung_glove, trusted_sign, found_coin, restacked_cairn,
+  signed_bothy) are write-only until this lands.
 - **Per-exit successors** — revisit trigger unchanged (SEGMENT-TABLE
   REWIRING NOTES): build when a segment's point is divergent futures.
-- **Session 6 rarity pass** — weighted-next placeholder numbers, the
-  trail-cycling rare farm (once_per_hike resets each trail), and hat
-  odds all tune together.
-- **More every_hike_ok segments** — the standing validator warning (7
-  repeatable < 14 max targetDeals) is the authoring backlog: long
-  hikes lean on repeats until the repeatable pool grows.
+- **gapM feel** — payoff beats land ~10 s after their tap (7 s walk +
+  ~3 s scroll-in). Drop gapM to ~1–3 for snappier; ~3 s is the floor.
+- **Per-biome lazy loading** — deferred until real layer PNGs exist;
+  load first setting + Wanda up front, stream the rest mid-walk
+  (Phaser's loader runs mid-scene; the service worker caches after
+  first fetch).
 
-## Polish, whenever
+## CONTENT PARKS
 
-- HUD value pulse when a stat changes (canteen fills → water number blinks)
-- Stream stop: splash one-shot (Session 7 audio list)
+- **More every_hike_ok segments** — THE authoring backlog: 7
+  repeatable deck segments vs max targetDeals 14 (the standing
+  warning). Long hikes lean on repeats until this pool grows.
+- **Flag payoffs** (need the flags read side first): the glove gone
+  from the fencepost on a later hike; stepping around the toppled
+  cairn flavors a later junction; the bothy guestbook visibly filling
+  across hikes (count, not boolean).
+- **Session 6 rarity pass** — weighted-next placeholder numbers
+  (feather 10%, echo 5%, rainbow 15%, fish 10%), the trail-cycling
+  rare farm (once_per_hike resets each trail), and hat odds all tune
+  together. hollow_rare's banded feather wants a journal home.
+- **stars_clear_01** — future home of the shooting-star rare roll
+  (returns with time-of-day).
+- **painted_sign_01 A** — a real detour segment once per-exit
+  successors exist.
+
+## ART PARKS
+
+The queue itself is ART-QUEUE.md (order authority); these are the
+parked *ideas* it drew from, kept for context:
+
+- Reactive poses for Wanda (drinking, picking-up, sitting,
+  breathing-idle) → ART-QUEUE Section G, wiring = a `pose` field.
+- Making branches visible (fork set-piece; scenery change is the
+  important half → the setting→scenery engine park above).
+- Ambience sprites that today are prose only: butterfly, fish, ripple
+  rings, tumbling crisp packet, dog follower, distant ridge shape →
+  all queued with † wiring flags in ART-QUEUE.
+
+## POLISH, WHENEVER
+
+- HUD value pulse when a stat changes (canteen fills → water number
+  blinks) → also ART-QUEUE G.
+- Stream stop: splash one-shot (Session 7 audio list).
+- Tone.js logs a start-time complaint under superhuman automated
+  tapping — cosmetic, tests only.

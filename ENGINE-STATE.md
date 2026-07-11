@@ -5,10 +5,11 @@ A living reality document. The design docs (GAME-DESIGN.md etc.) describe
 this file wins. Re-read at the start of a session; update at the end of any
 session that changes engine behavior, schema, save format, or validation.
 
-Last verified against the code: 11 July 2026, spine build session 2 of 2
-(THE DEALER — stitching rules 1–7 + skeleton live; every hike is now a
-shuffled deal). Line numbers drift — trust the named function over the
-number.
+Last verified against the code: 11 July 2026, chapter-close handover.
+Code is unchanged since the dealer commit (`f17e597`) — the dealer
+(rules 1–7 + skeleton) is live and every hike is a shuffled deal; all
+art is placeholder. Next chapter: the art pass, from ART-QUEUE.md
+GATE 0. Line numbers drift — trust the named function over the number.
 
 ## 1. MODULE MAP
 
@@ -190,7 +191,12 @@ Not validated: flag-name typos, linger-value sanity.
 Unchanged (see prior entries): synthesized one-shots + shimmer +
 footsteps exist; content cannot request sounds; time-of-day and scenery
 biome are distance-driven, unreadable and unwritable by content or
-engine decisions. Known cosmetic quirk: rapid automated tapping can
+engine decisions. Blend-mode reality (matters for the art pass /
+ART-QUEUE A1): the scenery **biome palettes are multiply tints**
+(`setTint` — can only darken, hence white/gray base art); the
+**day-wash and linger tints are alpha-blended rectangles** (can mute
+and shift, but no additive glow — a true golden-hour brightening needs
+a screen/overlay blend, parked with the time-of-day session). Known cosmetic quirk: rapid automated tapping can
 outrun Tone's chime scheduler ("start time must be strictly greater…" —
 one chime skipped, no game effect).
 
